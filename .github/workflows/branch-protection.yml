@@ -1,0 +1,35 @@
+name: Branch Protection Check
+
+on:
+  pull_request:
+    branches: [main, rec]
+
+jobs:
+  check-source-branch:
+    name: Validate Source Branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch flow (rec <- dev, main <- rec)
+        run: |
+          TARGET="${{ github.base_ref }}"
+          SOURCE="${{ github.head_ref }}"
+
+          echo "PR: $SOURCE -> $TARGET"
+
+          if [[ "$TARGET" == "main" ]]; then
+            if [[ "$SOURCE" != rec && "$SOURCE" != hotfix/* ]]; then
+              echo "::error::Branch 'main' only accepts merges from 'rec' or 'hotfix/*' branches."
+              echo "::error::Got: '$SOURCE'"
+              exit 1
+            fi
+            echo "Valid: $SOURCE -> main"
+          fi
+
+          if [[ "$TARGET" == "rec" ]]; then
+            if [[ "$SOURCE" != dev && "$SOURCE" != fix/* && "$SOURCE" != hotfix/* ]]; then
+              echo "::error::Branch 'rec' only accepts merges from 'dev', 'fix/*', or 'hotfix/*' branches."
+              echo "::error::Got: '$SOURCE'"
+              exit 1
+            fi
+            echo "Valid: $SOURCE -> rec"
+          fi

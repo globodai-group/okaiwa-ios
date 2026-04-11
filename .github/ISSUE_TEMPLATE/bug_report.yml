@@ -1,0 +1,114 @@
+name: Bug Report
+description: Report a bug in Okaiwa iOS
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. Please fill out the form below.
+        **Do NOT include any private keys, passwords, or message content.**
+
+  - type: input
+    id: version
+    attributes:
+      label: App Version
+      description: Which version of Okaiwa are you using?
+      placeholder: "e.g., 1.0.0 (build 42)"
+    validations:
+      required: true
+
+  - type: input
+    id: ios-version
+    attributes:
+      label: iOS Version
+      description: Which iOS version is your device running?
+      placeholder: "e.g., iOS 17.2"
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device
+      description: Which device are you using?
+      placeholder: "e.g., iPhone 15 Pro"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Feature Area
+      description: Which part of the app is affected?
+      options:
+        - Messaging / Chat
+        - Wallet / Transactions
+        - Authentication / Login
+        - Contacts
+        - Calls
+        - Settings
+        - Profile
+        - Notifications
+        - Performance
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Clear and concise description of the bug.
+      placeholder: "What happened? What did you expect to happen?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to reproduce the issue.
+      placeholder: |
+        1. Open the app
+        2. Navigate to '...'
+        3. Tap on '...'
+        4. Observe the error
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Crash Logs / Screenshots
+      description: |
+        Attach crash logs, screenshots, or screen recordings if available.
+        **Redact any personal information.**
+      placeholder: "Paste crash logs or drag-and-drop screenshots here"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Frequency
+      description: How often does this bug occur?
+      options:
+        - Always
+        - Often (> 50%)
+        - Sometimes (10-50%)
+        - Rarely (< 10%)
+        - Once
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+        - label: I have not included any private keys, passwords, or message content
+          required: true
