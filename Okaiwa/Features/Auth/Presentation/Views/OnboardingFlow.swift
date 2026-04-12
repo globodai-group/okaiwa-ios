@@ -63,8 +63,20 @@ public struct OnboardingFlow: View {
                 )
 
             case .complete:
-                // Transient — the host ContentView swaps us out for MainTabView.
-                Color.clear
+                // The host ContentView is expected to replace the
+                // onboarding flow with MainScaffold once onComplete
+                // fires. If the host keeps the OnboardingFlow alive we
+                // fall back to showing MainScaffold inline so the tab
+                // bar still appears, mirroring the Android navigation
+                // where OTP success pops to Screen.Main.
+                MainScaffold { tab in
+                    switch tab {
+                    case .chats:    ChatsTabPlaceholder()
+                    case .wallet:   WalletTabPlaceholder()
+                    case .settings: SettingsTabPlaceholder()
+                    case .profile:  ProfileView()
+                    }
+                }
             }
         }
         .animation(.easeInOut(duration: 0.25), value: step)
