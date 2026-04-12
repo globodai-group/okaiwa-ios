@@ -1,340 +1,110 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright 2026 Globodai FZCO
-
 import SwiftUI
 
-/// Conversation list screen — the main chat inbox.
+/// Conversation list — mirrors `ConversationListScreen.kt`.
 ///
-/// Displays all conversations sorted by last activity, with pinned
-/// conversations at the top. Supports search, folder filtering,
-/// swipe actions, and real-time updates.
-struct ConversationListView: View {
+/// Top bar shows "Okaiwa" wordmark + search + contacts action on the
+/// right. A lime new-conversation FAB floats above the tab bar, offset
+/// via `@Environment(\.floatingBarInset)`.
+///
+/// The rich list rendering (pinned conversations, swipe actions, search
+/// filter, real-time updates) will be restored once the ViewModel is
+/// wired up to the real ChatRepository — for now the empty state is the
+/// only visible surface because every call to `StubChatRepository`
+/// returns an empty list.
+public struct ConversationListView: View {
+    let onNavigateToChat: (String) -> Void
+    let onNavigateToContacts: () -> Void
 
-    @State private var viewModel = ConversationListViewModel()
-    @Environment(AppRouter.self) private var router
+    @Environment(\.floatingBarInset) private var floatingBarInset: CGFloat
 
-    var body: some View {
-        Group {
-            switch viewModel.loadState {
-            case .idle, .loading:
-                loadingView
-
-            case .loaded:
-                if viewModel.filteredConversations.isEmpty {
-                    emptyStateView
-                } else {
-                    conversationList
-                }
-
-            case .error(let message):
-                errorView(message: message)
-            }
-        }
-        .navigationTitle("Chats")
-        .searchable(
-            text: Binding(
-                get: { viewModel.searchText },
-                set: { viewModel.searchText = $0 }
-            ),
-            prompt: "Search conversations"
-        )
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    router.presentSheet(.newMessage)
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                }
-            }
-
-            ToolbarItem(placement: .topBarLeading) {
-                folderMenu
-            }
-        }
-        .task {
-            await viewModel.loadConversations()
-            viewModel.startListeningForUpdates()
-        }
-        .refreshable {
-            await viewModel.loadConversations()
-        }
+    public init(
+        onNavigateToChat: @escaping (String) -> Void,
+        onNavigateToContacts: @escaping () -> Void
+    ) {
+        self.onNavigateToChat = onNavigateToChat
+        self.onNavigateToContacts = onNavigateToContacts
     }
 
-    // MARK: - Conversation List
+    public var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            VStack(spacing: 0) {
+                TopBar(
+                    onSearchTap: { /* TODO: inline search */ },
+                    onContactsTap: onNavigateToContacts
+                )
 
-    private var conversationList: some View {
-        List {
-            ForEach(viewModel.filteredConversations) { conversation in
-                ConversationRow(conversation: conversation)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        router.navigate(to: .chat(conversationId: conversation.id))
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            Task { await viewModel.deleteConversation(conversation) }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-
-                        Button {
-                            Task { await viewModel.togglePin(for: conversation) }
-                        } label: {
-                            Label(
-                                conversation.isPinned ? "Unpin" : "Pin",
-                                systemImage: conversation.isPinned ? "pin.slash" : "pin"
-                            )
-                        }
-                        .tint(OkaiwaTheme.Colors.primaryFallback)
-                    }
-                    .swipeActions(edge: .leading) {
-                        if conversation.unreadCount > 0 {
-                            Button {
-                                Task { await viewModel.markAsRead(conversation) }
-                            } label: {
-                                Label("Read", systemImage: "envelope.open")
-                            }
-                            .tint(OkaiwaTheme.Colors.success)
-                        }
-                    }
+                EmptyConversationsView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.bottom, floatingBarInset)
             }
-        }
-        .listStyle(.plain)
-        .withOkaiwaDestinations()
-    }
 
-    // MARK: - Folder Menu
-
-    private var folderMenu: some View {
-        Menu {
-            ForEach(Conversation.Folder.allCases, id: \.self) { folder in
-                Button {
-                    viewModel.selectedFolder = folder
-                } label: {
-                    HStack {
-                        Text(folder.rawValue.capitalized)
-                        if viewModel.selectedFolder == folder {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
+            // New-conversation FAB — lime circle pinned above the tab bar.
+            Button(action: onNavigateToContacts) {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(OkaiwaColors.black)
+                    .frame(width: 56, height: 56)
+                    .background(OkaiwaColors.lime)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 3)
             }
-        } label: {
-            HStack(spacing: OkaiwaTheme.Spacing.xxs) {
-                Image(systemName: "line.3.horizontal.decrease.circle")
-                if viewModel.selectedFolder != .all {
-                    Text(viewModel.selectedFolder.rawValue.capitalized)
-                        .font(OkaiwaTheme.Typography.caption)
-                }
-            }
+            .padding(.trailing, 20)
+            .padding(.bottom, floatingBarInset + 4)
         }
-    }
-
-    // MARK: - States
-
-    private var loadingView: some View {
-        VStack {
-            ProgressView()
-                .scaleEffect(1.2)
-            Text("Loading conversations...")
-                .font(OkaiwaTheme.Typography.callout)
-                .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
-                .padding(.top, OkaiwaTheme.Spacing.sm)
-        }
-    }
-
-    private var emptyStateView: some View {
-        VStack(spacing: OkaiwaTheme.Spacing.md) {
-            Image(systemName: "message.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(OkaiwaTheme.Colors.textTertiary)
-
-            Text("No conversations yet")
-                .font(OkaiwaTheme.Typography.headline)
-
-            Text("Tap the compose button to start a secure chat.")
-                .font(OkaiwaTheme.Typography.callout)
-                .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
-                .multilineTextAlignment(.center)
-
-            Button {
-                router.presentSheet(.newMessage)
-            } label: {
-                Label("New Message", systemImage: "square.and.pencil")
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(OkaiwaTheme.Colors.primaryFallback)
-            .padding(.top, OkaiwaTheme.Spacing.sm)
-        }
-        .padding(OkaiwaTheme.Spacing.xl)
-    }
-
-    private func errorView(message: String) -> some View {
-        VStack(spacing: OkaiwaTheme.Spacing.md) {
-            Image(systemName: "wifi.exclamationmark")
-                .font(.system(size: 48))
-                .foregroundStyle(OkaiwaTheme.Colors.destructive)
-
-            Text(message)
-                .font(OkaiwaTheme.Typography.callout)
-                .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
-                .multilineTextAlignment(.center)
-
-            Button("Retry") {
-                Task { await viewModel.loadConversations() }
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(OkaiwaTheme.Colors.primaryFallback)
-        }
-        .padding(OkaiwaTheme.Spacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(OkaiwaColors.black)
     }
 }
 
-// MARK: - Conversation Row
-
-struct ConversationRow: View {
-
-    let conversation: Conversation
-
-    private let avatarSize: CGFloat = 52
-    private let timeFormatter: RelativeDateTimeFormatter = {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter
-    }()
+private struct TopBar: View {
+    let onSearchTap: () -> Void
+    let onContactsTap: () -> Void
 
     var body: some View {
-        HStack(spacing: OkaiwaTheme.Spacing.sm) {
-            // Avatar
-            ZStack {
-                Circle()
-                    .fill(OkaiwaTheme.Colors.primaryFallback.opacity(0.15))
-                    .frame(width: avatarSize, height: avatarSize)
+        HStack(spacing: 0) {
+            Text("Okaiwa")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(OkaiwaColors.white)
+                .padding(.leading, 24)
 
-                Text(avatarInitials)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(OkaiwaTheme.Colors.primaryFallback)
+            Spacer()
+
+            Button(action: onSearchTap) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 19, weight: .medium))
+                    .foregroundStyle(OkaiwaColors.white)
+                    .padding(12)
             }
 
-            // Content
-            VStack(alignment: .leading, spacing: OkaiwaTheme.Spacing.xxs) {
-                HStack {
-                    HStack(spacing: OkaiwaTheme.Spacing.xxs) {
-                        if conversation.isPinned {
-                            Image(systemName: "pin.fill")
-                                .font(.system(size: 10))
-                                .foregroundStyle(OkaiwaTheme.Colors.textTertiary)
-                        }
-
-                        Text(conversation.displayName)
-                            .font(OkaiwaTheme.Typography.headline)
-                            .lineLimit(1)
-                    }
-
-                    Spacer()
-
-                    if let lastMessage = conversation.lastMessage {
-                        Text(timeFormatter.localizedString(for: lastMessage.timestamp, relativeTo: Date()))
-                            .font(OkaiwaTheme.Typography.caption)
-                            .foregroundStyle(
-                                conversation.unreadCount > 0
-                                    ? OkaiwaTheme.Colors.primaryFallback
-                                    : OkaiwaTheme.Colors.textTertiary
-                            )
-                    }
-                }
-
-                HStack {
-                    // Message preview
-                    if let lastMessage = conversation.lastMessage {
-                        HStack(spacing: OkaiwaTheme.Spacing.xxs) {
-                            if lastMessage.contentType != .text {
-                                Image(systemName: iconForContentType(lastMessage.contentType))
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(OkaiwaTheme.Colors.textTertiary)
-                            }
-
-                            Text(previewText(for: lastMessage))
-                                .font(OkaiwaTheme.Typography.subheadline)
-                                .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
-                                .lineLimit(2)
-                        }
-                    } else {
-                        Text("No messages yet")
-                            .font(OkaiwaTheme.Typography.subheadline)
-                            .foregroundStyle(OkaiwaTheme.Colors.textTertiary)
-                            .italic()
-                    }
-
-                    Spacer()
-
-                    // Unread badge
-                    if conversation.unreadCount > 0 {
-                        Text(conversation.unreadCount > 99 ? "99+" : "\(conversation.unreadCount)")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(
-                                conversation.isEffectivelyMuted
-                                    ? OkaiwaTheme.Colors.textTertiary
-                                    : OkaiwaTheme.Colors.unreadBadge
-                            )
-                            .clipShape(Capsule())
-                    }
-
-                    // Ephemeral indicator
-                    if conversation.hasEphemeralTimer {
-                        Image(systemName: "timer")
-                            .font(.system(size: 12))
-                            .foregroundStyle(OkaiwaTheme.Colors.textTertiary)
-                    }
-                }
+            Button(action: onContactsTap) {
+                Image(systemName: "person.2")
+                    .font(.system(size: 19, weight: .medium))
+                    .foregroundStyle(OkaiwaColors.white)
+                    .padding(12)
             }
+            .padding(.trailing, 4)
         }
-        .padding(.vertical, OkaiwaTheme.Spacing.xxs)
+        .padding(.vertical, 8)
     }
+}
 
-    // MARK: - Helpers
+private struct EmptyConversationsView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "bubble.left")
+                .font(.system(size: 52, weight: .light))
+                .foregroundStyle(OkaiwaColors.muted)
 
-    private var avatarInitials: String {
-        let name = conversation.displayName
-        let parts = name.split(separator: " ")
-        if parts.count >= 2 {
-            return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
-        }
-        return String(name.prefix(2)).uppercased()
-    }
+            Text("Aucune conversation")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(OkaiwaColors.white)
 
-    private func iconForContentType(_ type: Message.ContentType) -> String {
-        switch type {
-        case .image: return "photo"
-        case .video: return "video"
-        case .audio, .voiceNote: return "waveform"
-        case .file: return "doc"
-        case .contact: return "person.crop.circle"
-        case .location: return "location"
-        case .cryptoPayment: return "bitcoinsign.circle"
-        case .systemEvent: return "info.circle"
-        case .text: return "text.bubble"
+            Text("Commencez une conversation chiffrée avec un contact.")
+                .font(.system(size: 14))
+                .foregroundStyle(OkaiwaColors.muted)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
         }
-    }
-
-    private func previewText(for message: Conversation.LastMessagePreview) -> String {
-        if !message.textPreview.isEmpty {
-            return message.textPreview
-        }
-        switch message.contentType {
-        case .image: return "Photo"
-        case .video: return "Video"
-        case .audio: return "Audio"
-        case .voiceNote: return "Voice message"
-        case .file: return "File"
-        case .contact: return "Contact"
-        case .location: return "Location"
-        case .cryptoPayment: return "Crypto payment"
-        case .systemEvent: return "System message"
-        case .text: return ""
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

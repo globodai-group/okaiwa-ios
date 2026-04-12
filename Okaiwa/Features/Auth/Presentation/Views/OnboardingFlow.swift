@@ -71,8 +71,16 @@ public struct OnboardingFlow: View {
                 // where OTP success pops to Screen.Main.
                 MainScaffold { tab in
                     switch tab {
-                    case .chats:    ChatsTabPlaceholder()
-                    case .wallet:   WalletTabPlaceholder()
+                    case .chats:
+                        ConversationListView(
+                            onNavigateToChat: { _ in /* TODO: push chat */ },
+                            onNavigateToContacts: { /* TODO: push contacts */ }
+                        )
+                    case .wallet:
+                        WalletOnboardingView(
+                            onCreateWallet: { /* TODO: push seed-phrase flow */ },
+                            onImportWallet: { /* TODO: push mnemonic import */ }
+                        )
                     case .settings: SettingsTabPlaceholder()
                     case .profile:  ProfileView()
                     }
