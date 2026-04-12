@@ -53,7 +53,9 @@ public struct ConversationListView: View {
                     .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 3)
             }
             .padding(.trailing, 20)
-            .padding(.bottom, floatingBarInset + 4)
+            // 16 pt gutter above the floating bar keeps the FAB
+            // comfortably off the bar rather than hugging it.
+            .padding(.bottom, floatingBarInset + 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OkaiwaColors.black)
