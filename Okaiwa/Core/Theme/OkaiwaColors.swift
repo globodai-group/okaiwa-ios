@@ -11,11 +11,13 @@ public enum OkaiwaColors {
     public static let limePressed = Color(red: 0xC8 / 255, green: 0xD9 / 255, blue: 0x35 / 255)
     public static let limeDim = Color(red: 0x7A / 255, green: 0x82 / 255, blue: 0x21 / 255)
 
-    // Dark canvas
-    public static let black = Color(red: 0x0F / 255, green: 0x0F / 255, blue: 0x0F / 255)
-    public static let blackElevated = Color(red: 0x1A / 255, green: 0x1A / 255, blue: 0x1A / 255)
-    public static let blackCard = Color(red: 0x24 / 255, green: 0x24 / 255, blue: 0x24 / 255)
-    public static let blackBorder = Color(red: 0x2F / 255, green: 0x2F / 255, blue: 0x2F / 255)
+    // Dark canvas — `black` matches #242424 from the Figma logo kit
+    // (the rectangle behind the whale). The rest of the scale steps up
+    // to preserve the elevation hierarchy for inputs, cards, borders.
+    public static let black = Color(red: 0x24 / 255, green: 0x24 / 255, blue: 0x24 / 255)
+    public static let blackElevated = Color(red: 0x2D / 255, green: 0x2D / 255, blue: 0x2D / 255)
+    public static let blackCard = Color(red: 0x36 / 255, green: 0x36 / 255, blue: 0x36 / 255)
+    public static let blackBorder = Color(red: 0x40 / 255, green: 0x40 / 255, blue: 0x40 / 255)
 
     // Text
     public static let white = Color.white
