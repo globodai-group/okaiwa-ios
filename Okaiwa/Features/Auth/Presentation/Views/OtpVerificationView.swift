@@ -122,6 +122,17 @@ public struct OtpVerificationView: View {
                     Spacer()
                 }
 
+                // Dev hint — debug builds only.
+                if DevConfig.isDebug {
+                    Spacer().frame(height: 16)
+                    Text("DEV — utilisez 000000 pour passer")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(OkaiwaColors.lime)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 24)
+                }
+
                 Spacer()
 
                 // Submit
