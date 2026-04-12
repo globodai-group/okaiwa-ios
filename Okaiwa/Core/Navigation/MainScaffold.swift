@@ -102,21 +102,23 @@ private struct FloatingNavBar: View {
             }
         }
         .background(
-            // `.ultraThinMaterial` gives the system's adaptive blur;
-            // we tint it with the elevated canvas at 78 % so the brand
-            // keeps its dark-first identity instead of the gray system
-            // glass. Rounded to 16 pt to match the Welcome CTAs.
+            // `.ultraThinMaterial` provides the system's adaptive blur;
+            // we tint it with the elevated canvas at 92 % so the brand
+            // keeps its dark-first identity and tab labels never sit on
+            // noisy artwork (the 78 % version read as too washed-out).
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(OkaiwaColors.blackElevated.opacity(0.78))
+                        .fill(OkaiwaColors.blackElevated.opacity(0.92))
                 )
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(OkaiwaColors.blackBorder.opacity(0.6), lineWidth: 1)
+                .stroke(OkaiwaColors.blackBorder.opacity(0.7), lineWidth: 1)
         )
+        // Soft lift — reads as "floating" without a harsh halo.
+        .shadow(color: .black.opacity(0.35), radius: 12, x: 0, y: 4)
     }
 }
 
@@ -126,6 +128,8 @@ private struct TabItem: View {
     let onTap: () -> Void
 
     var body: some View {
+        // `.plain` button style already drops the system highlight — no
+        // ripple equivalent to disable, unlike Compose's selectable.
         Button(action: onTap) {
             VStack(spacing: 4) {
                 Image(systemName: isSelected ? tab.systemIcon : tab.systemIconUnselected)
