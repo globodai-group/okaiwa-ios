@@ -86,7 +86,9 @@ public struct WalletOnboardingView: View {
                 }
                 .padding(.horizontal, 24)
                 .frame(maxHeight: .infinity, alignment: .bottom)
-                .padding(.bottom, floatingBarInset)
+                // Extra 16 pt gutter above the floating tab bar — the
+                // inset alone had the CTAs visually kissing the bar.
+                .padding(.bottom, floatingBarInset + 16)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
