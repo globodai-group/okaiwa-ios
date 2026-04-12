@@ -1,119 +1,115 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright 2026 Globodai FZCO
-
 import Foundation
 
-/// An encrypted message within a conversation.
+/// Chat message entity — mirrors `Message.kt` on Android.
 ///
-/// Messages are always stored encrypted locally (via SQLCipher).
-/// The `encryptedContent` field contains the Signal Protocol ciphertext;
-/// plaintext is only materialized in memory for display.
-struct Message: Identifiable, Codable, Sendable, Equatable {
+/// Messages are always encrypted locally and in transit;
+/// `plaintextContent` only exists after decryption in memory.
+public struct Message: Identifiable, Hashable, Equatable, Sendable {
+    public let id: String
+    public let conversationId: String
+    public let senderId: String
+    public var plaintextContent: String?
+    public var encryptedPayload: Data?
+    public var type: MessageType
+    public var status: MessageStatus
+    public var replyToMessageId: String?
+    public var attachments: [Attachment]
+    public var disappearingDurationSeconds: TimeInterval?
+    public let sentAt: Date
+    public var deliveredAt: Date?
+    public var readAt: Date?
+    public var editedAt: Date?
 
-    /// Unique message identifier (UUID v4, generated client-side).
-    let id: String
-
-    /// The conversation this message belongs to.
-    let conversationId: String
-
-    /// Fingerprint of the sender's identity key.
-    /// Used to attribute messages without revealing identity to the server.
-    let senderFingerprint: String
-
-    /// Signal Protocol ciphertext envelope.
-    /// Decrypted on-device using the session ratchet state.
-    let encryptedContent: Data
-
-    /// Content type for rendering.
-    let contentType: ContentType
-
-    /// Server-assigned timestamp (monotonic, not client clock).
-    let timestamp: Date
-
-    /// Ephemeral timer in seconds. `nil` means the message persists indefinitely.
-    let ephemeralTimer: TimeInterval?
-
-    /// When this message should be auto-deleted (computed from ephemeralTimer + read time).
-    var expiresAt: Date?
-
-    /// Delivery and read status.
-    var status: Status
-
-    /// Quoted/reply message ID, if this is a reply.
-    let replyToId: String?
-
-    /// Attachment metadata (encrypted, stored separately).
-    let attachments: [AttachmentRef]
-
-    // MARK: - Nested Types
-
-    enum ContentType: String, Codable, Sendable {
-        case text
-        case image
-        case video
-        case audio
-        case file
-        case voiceNote
-        case contact
-        case location
-        case cryptoPayment
-        case systemEvent
-    }
-
-    enum Status: String, Codable, Sendable, Equatable {
-        /// Message is being encrypted and queued.
-        case sending
-        /// Message sent to server.
-        case sent
-        /// Server confirmed delivery to recipient's device.
-        case delivered
-        /// Recipient has read the message.
-        case read
-        /// Sending failed (network error, encryption error).
-        case failed
-    }
-
-    /// Reference to an encrypted attachment stored on CDN.
-    struct AttachmentRef: Codable, Sendable, Equatable {
-        /// CDN attachment identifier.
-        let attachmentId: String
-        /// AES-256-GCM key for decrypting the attachment.
-        let encryptionKey: Data
-        /// SHA-256 digest of the plaintext for integrity verification.
-        let digest: Data
-        /// MIME type (e.g., "image/jpeg").
-        let mimeType: String
-        /// File size in bytes (of the encrypted blob).
-        let size: Int64
-        /// Original filename, if available.
-        let filename: String?
-        /// Thumbnail data for images/videos (inline, small).
-        let thumbnailData: Data?
+    public init(
+        id: String,
+        conversationId: String,
+        senderId: String,
+        plaintextContent: String? = nil,
+        encryptedPayload: Data? = nil,
+        type: MessageType = .text,
+        status: MessageStatus = .sending,
+        replyToMessageId: String? = nil,
+        attachments: [Attachment] = [],
+        disappearingDurationSeconds: TimeInterval? = nil,
+        sentAt: Date,
+        deliveredAt: Date? = nil,
+        readAt: Date? = nil,
+        editedAt: Date? = nil
+    ) {
+        self.id = id
+        self.conversationId = conversationId
+        self.senderId = senderId
+        self.plaintextContent = plaintextContent
+        self.encryptedPayload = encryptedPayload
+        self.type = type
+        self.status = status
+        self.replyToMessageId = replyToMessageId
+        self.attachments = attachments
+        self.disappearingDurationSeconds = disappearingDurationSeconds
+        self.sentAt = sentAt
+        self.deliveredAt = deliveredAt
+        self.readAt = readAt
+        self.editedAt = editedAt
     }
 }
 
-// MARK: - Convenience
+public enum MessageType: String, Codable, Sendable {
+    case text
+    case image
+    case video
+    case audio
+    case voiceNote
+    case file
+    case location
+    case contact
+    case cryptoPayment
+    case system
+}
 
-extension Message {
+public enum MessageStatus: String, Codable, Sendable {
+    case sending
+    case sent
+    case delivered
+    case read
+    case failed
+}
 
-    /// Whether this message was sent by the local user.
-    func isMine(localFingerprint: String) -> Bool {
-        senderFingerprint == localFingerprint
-    }
+public struct Attachment: Hashable, Equatable, Sendable, Identifiable {
+    public let id: String
+    public let fileName: String
+    public let mimeType: String
+    public let sizeBytes: Int64
+    public let encryptedUrl: String?
+    public let thumbnailUrl: String?
+    public let width: Int?
+    public let height: Int?
+    public let durationMs: Int64?
+    public let encryptionKey: Data?
+    public let digest: Data?
 
-    /// Whether this message has an active ephemeral timer.
-    var isEphemeral: Bool {
-        ephemeralTimer != nil
-    }
-
-    /// Whether this message has expired and should be deleted.
-    var hasExpired: Bool {
-        guard let expiresAt else { return false }
-        return Date() >= expiresAt
-    }
-
-    /// Whether this message has attachments.
-    var hasAttachments: Bool {
-        !attachments.isEmpty
+    public init(
+        id: String,
+        fileName: String,
+        mimeType: String,
+        sizeBytes: Int64,
+        encryptedUrl: String? = nil,
+        thumbnailUrl: String? = nil,
+        width: Int? = nil,
+        height: Int? = nil,
+        durationMs: Int64? = nil,
+        encryptionKey: Data? = nil,
+        digest: Data? = nil
+    ) {
+        self.id = id
+        self.fileName = fileName
+        self.mimeType = mimeType
+        self.sizeBytes = sizeBytes
+        self.encryptedUrl = encryptedUrl
+        self.thumbnailUrl = thumbnailUrl
+        self.width = width
+        self.height = height
+        self.durationMs = durationMs
+        self.encryptionKey = encryptionKey
+        self.digest = digest
     }
 }

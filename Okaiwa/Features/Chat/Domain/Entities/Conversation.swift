@@ -1,141 +1,136 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright 2026 Globodai FZCO
-
 import Foundation
 
-/// A conversation (thread) between two or more participants.
+/// Conversation entity — mirrors `Conversation.kt` on Android.
 ///
-/// Conversations can be one-to-one or group chats. They hold metadata
-/// about participants, ephemeral settings, and organizational state.
-struct Conversation: Identifiable, Codable, Sendable, Equatable {
+/// Represents a 1:1 or group conversation with metadata about
+/// participants, last message preview, and encryption state.
+public struct Conversation: Identifiable, Hashable, Equatable, Sendable {
+    public let id: String
+    public let type: ConversationType
+    public var title: String?
+    public var avatarUrl: String?
+    public var participants: [Participant]
+    public var lastMessage: MessagePreview?
+    public var unreadCount: Int
+    public var isMuted: Bool
+    public var isPinned: Bool
+    public var isArchived: Bool
+    public var muteExpiresAt: Date?
+    public var disappearingDurationSeconds: TimeInterval?
+    public var folder: ConversationFolder
+    public let createdAt: Date
+    public var updatedAt: Date
 
-    /// Unique conversation identifier (UUID v4).
-    let id: String
-
-    /// Participants' identity key fingerprints.
-    let participants: [Participant]
-
-    /// The most recent message in this conversation (for list preview).
-    var lastMessage: LastMessagePreview?
-
-    /// Number of unread messages.
-    var unreadCount: Int
-
-    /// Ephemeral message timer in seconds. `nil` means messages persist.
-    var ephemeralTimerSeconds: TimeInterval?
-
-    /// Whether this conversation is pinned to the top.
-    var isPinned: Bool
-
-    /// Whether this conversation is archived.
-    var isArchived: Bool
-
-    /// Whether this conversation is muted.
-    var isMuted: Bool
-
-    /// Mute expiration date. `nil` means muted indefinitely.
-    var muteExpiresAt: Date?
-
-    /// Organizational folder.
-    var folder: Folder
-
-    /// Conversation type.
-    let type: ConversationType
-
-    /// Group metadata (only for group conversations).
-    var groupInfo: GroupInfo?
-
-    /// When this conversation was created.
-    let createdAt: Date
-
-    /// Last activity timestamp (for sorting).
-    var lastActivityAt: Date
-
-    // MARK: - Nested Types
-
-    struct Participant: Codable, Sendable, Equatable {
-        let fingerprint: String
-        let username: String
-        let role: Role
-
-        enum Role: String, Codable, Sendable {
-            case member
-            case admin
-            case owner
-        }
+    public init(
+        id: String,
+        type: ConversationType,
+        title: String? = nil,
+        avatarUrl: String? = nil,
+        participants: [Participant],
+        lastMessage: MessagePreview? = nil,
+        unreadCount: Int = 0,
+        isMuted: Bool = false,
+        isPinned: Bool = false,
+        isArchived: Bool = false,
+        muteExpiresAt: Date? = nil,
+        disappearingDurationSeconds: TimeInterval? = nil,
+        folder: ConversationFolder = .all,
+        createdAt: Date,
+        updatedAt: Date
+    ) {
+        self.id = id
+        self.type = type
+        self.title = title
+        self.avatarUrl = avatarUrl
+        self.participants = participants
+        self.lastMessage = lastMessage
+        self.unreadCount = unreadCount
+        self.isMuted = isMuted
+        self.isPinned = isPinned
+        self.isArchived = isArchived
+        self.muteExpiresAt = muteExpiresAt
+        self.disappearingDurationSeconds = disappearingDurationSeconds
+        self.folder = folder
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
     }
 
-    struct LastMessagePreview: Codable, Sendable, Equatable {
-        let senderUsername: String
-        /// Decrypted text preview (first 100 chars). Empty for non-text.
-        let textPreview: String
-        let contentType: Message.ContentType
-        let timestamp: Date
-        let status: Message.Status
+    /// Display title: conversation title for groups, participant name for 1:1.
+    public var displayTitle: String {
+        title ?? participants.first?.displayName ?? "Unknown"
     }
 
-    enum ConversationType: String, Codable, Sendable {
-        case oneToOne
-        case group
-    }
-
-    enum Folder: String, Codable, Sendable, CaseIterable {
-        case all
-        case personal
-        case work
-        case crypto
-        case archived
-    }
-
-    struct GroupInfo: Codable, Sendable, Equatable {
-        let name: String
-        let description: String?
-        let avatarAttachmentId: String?
-        let maxMembers: Int
-        /// Whether only admins can send messages.
-        let isAnnounceOnly: Bool
+    /// Whether all participants have verified keys.
+    public var isFullyVerified: Bool {
+        participants.allSatisfy { $0.isKeyVerified }
     }
 }
 
-// MARK: - Convenience
+public enum ConversationType: String, Codable, Sendable {
+    case oneToOne
+    case group
+}
 
-extension Conversation {
+public enum ConversationFolder: String, Codable, Sendable {
+    case all
+    case personal
+    case work
+    case crypto
+    case archived
+}
 
-    /// Display name for the conversation.
-    var displayName: String {
-        switch type {
-        case .oneToOne:
-            // Show the other participant's username
-            return participants.first(where: { $0.role != .owner })?.username
-                ?? participants.first?.username
-                ?? "Unknown"
-        case .group:
-            return groupInfo?.name ?? "Group Chat"
-        }
+public enum ParticipantRole: String, Codable, Sendable {
+    case owner
+    case admin
+    case member
+}
+
+public struct Participant: Hashable, Equatable, Sendable {
+    public let userId: String
+    public let displayName: String
+    public let avatarUrl: String?
+    public let role: ParticipantRole
+    public let isKeyVerified: Bool
+    public let joinedAt: Date
+
+    public init(
+        userId: String,
+        displayName: String,
+        avatarUrl: String? = nil,
+        role: ParticipantRole = .member,
+        isKeyVerified: Bool = false,
+        joinedAt: Date
+    ) {
+        self.userId = userId
+        self.displayName = displayName
+        self.avatarUrl = avatarUrl
+        self.role = role
+        self.isKeyVerified = isKeyVerified
+        self.joinedAt = joinedAt
     }
 
-    /// Whether the conversation has an active ephemeral timer.
-    var hasEphemeralTimer: Bool {
-        ephemeralTimerSeconds != nil
-    }
+    public var isAdmin: Bool { role == .admin || role == .owner }
+}
 
-    /// Whether the conversation is effectively muted right now.
-    var isEffectivelyMuted: Bool {
-        guard isMuted else { return false }
-        if let expiresAt = muteExpiresAt {
-            return Date() < expiresAt
-        }
-        return true // Muted indefinitely
-    }
+/// Lightweight message preview for conversation list display.
+public struct MessagePreview: Hashable, Equatable, Sendable {
+    public let messageId: String
+    public let senderName: String?
+    public let content: String
+    public let type: MessageType
+    public let timestamp: Date
 
-    /// Formatted ephemeral timer for display.
-    var ephemeralTimerDisplay: String? {
-        guard let seconds = ephemeralTimerSeconds else { return nil }
-        switch seconds {
-        case ..<60: return "\(Int(seconds))s"
-        case ..<3600: return "\(Int(seconds / 60))m"
-        case ..<86400: return "\(Int(seconds / 3600))h"
-        default: return "\(Int(seconds / 86400))d"
-        }
+    public init(
+        messageId: String,
+        senderName: String? = nil,
+        content: String,
+        type: MessageType = .text,
+        timestamp: Date
+    ) {
+        self.messageId = messageId
+        self.senderName = senderName
+        self.content = content
+        self.type = type
+        self.timestamp = timestamp
     }
 }
