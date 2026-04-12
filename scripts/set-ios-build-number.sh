@@ -2,31 +2,37 @@
 #
 # set-ios-build-number.sh
 # -----------------------
-# Keep CFBundleVersion in sync with the git commit count, matching the
-# Android scheme (versionCode = `git rev-list --count HEAD`).
+# Keep version numbers in sync with the git commit count, matching
+# the Android scheme exactly:
+#   versionCode  ↔ CFBundleVersion            = git rev-list --count HEAD
+#   versionName  ↔ CFBundleShortVersionString = {MAJOR}.{MINOR}.{count}
 #
 # Wire this into the Xcode scheme as a pre-action OR as a "Run Script"
 # build phase placed BEFORE the "Copy Bundle Resources" phase so the
 # rewritten Info.plist is picked up in the final IPA.
 #
-# Example build phase script (paste into Xcode):
-#   "${SRCROOT}/scripts/set-ios-build-number.sh"
-#
-# Outside of a git checkout the script falls back to "1" so archive
+# Outside of a git checkout the script falls back to 1 so archive
 # builds from a tarball still succeed.
 #
 set -euo pipefail
+
+# Manual major/minor — bump for user-facing milestones. Keep in sync
+# with okaiwaMajor / okaiwaMinor in okaiwa-android/app/build.gradle.kts.
+readonly OKAIWA_MAJOR=1
+readonly OKAIWA_MINOR=0
 
 # Locate the repo root. When called as a build phase Xcode sets SRCROOT.
 REPO_ROOT="${SRCROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 cd "$REPO_ROOT"
 
-# Compute the monotonic build number from git history.
+# Monotonic build number from git history.
 if git rev-parse --git-dir > /dev/null 2>&1; then
   BUILD_NUMBER=$(git rev-list --count HEAD)
 else
   BUILD_NUMBER=1
 fi
+
+MARKETING_VERSION="${OKAIWA_MAJOR}.${OKAIWA_MINOR}.${BUILD_NUMBER}"
 
 # Info.plist is passed via $INFOPLIST_FILE when run from Xcode.
 # Fall back to the well-known path for manual runs.
@@ -37,8 +43,10 @@ if [[ ! -f "$INFOPLIST" ]]; then
   exit 1
 fi
 
-# Rewrite CFBundleVersion in place. PlistBuddy is always available on
+# Rewrite both fields in place. PlistBuddy is always available on
 # macOS build agents (system framework, no brew install required).
 /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NUMBER" "$INFOPLIST"
+/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $MARKETING_VERSION" "$INFOPLIST"
 
-echo "→ CFBundleVersion set to $BUILD_NUMBER (from git rev-list --count HEAD)"
+echo "→ CFBundleShortVersionString = $MARKETING_VERSION"
+echo "→ CFBundleVersion            = $BUILD_NUMBER"
