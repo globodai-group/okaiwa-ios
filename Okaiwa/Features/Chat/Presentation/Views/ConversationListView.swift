@@ -38,14 +38,18 @@ public struct ConversationListView: View {
                     .padding(.bottom, floatingBarInset)
             }
 
-            // New-conversation FAB — lime circle pinned above the tab bar.
+            // New-conversation FAB — rounded square lime tile. The
+            // 16 pt corner radius matches every other rounded surface in
+            // the app (Welcome CTAs, the floating nav bar itself). A
+            // chat bubble reads more directly than the earlier pencil
+            // icon for "new conversation".
             Button(action: onNavigateToContacts) {
-                Image(systemName: "square.and.pencil")
+                Image(systemName: "bubble.left.fill")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(OkaiwaColors.black)
                     .frame(width: 56, height: 56)
                     .background(OkaiwaColors.lime)
-                    .clipShape(Circle())
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 3)
             }
             .padding(.trailing, 20)
