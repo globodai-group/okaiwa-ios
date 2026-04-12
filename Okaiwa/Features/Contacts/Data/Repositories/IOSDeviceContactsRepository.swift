@@ -42,21 +42,16 @@ public final class IOSDeviceContactsRepository: DeviceContactsRepository {
                 let key = "\(display):\(normalized)"
                 guard seen.insert(key).inserted else { return }
 
-                // Mock "on Okaiwa" flag — every fourth contact, matches
-                // the Android coin-flip exactly for parity.
-                let isOnOkaiwa = (abs(normalized.hashValue) & 3) == 0
-                let username = isOnOkaiwa
-                    ? "@\(display.lowercased().replacingOccurrences(of: " ", with: "").prefix(12))"
-                    : nil
-
+                // Flag filled in after the enumeration completes so the
+                // cohort size is known (see below).
                 results.append(
                     DeviceContact(
                         id: contact.identifier,
                         displayName: display,
                         phoneNumberE164: normalized,
                         avatarData: contact.imageData,
-                        isOnOkaiwa: isOnOkaiwa,
-                        okaiwaUsername: username
+                        isOnOkaiwa: false,
+                        okaiwaUsername: nil
                     )
                 )
             }
@@ -64,6 +59,25 @@ public final class IOSDeviceContactsRepository: DeviceContactsRepository {
             return []
         }
 
-        return results
+        // Mock "on Okaiwa" split — flip the first 8 entries to Okaiwa
+        // users. Mirrors `AndroidDeviceContactsRepository.kt`. The
+        // previous `hashValue & 3 == 0` coin-flip was unstable across
+        // platforms and phone-number distributions, flagging the whole
+        // address book on some devices.
+        var cohort = results.prefix(8).map { c -> DeviceContact in
+            DeviceContact(
+                id: c.id,
+                displayName: c.displayName,
+                phoneNumberE164: c.phoneNumberE164,
+                avatarData: c.avatarData,
+                isOnOkaiwa: true,
+                okaiwaUsername: "@" + c.displayName
+                    .lowercased()
+                    .replacingOccurrences(of: " ", with: "")
+                    .prefix(12)
+            )
+        }
+        cohort.append(contentsOf: results.dropFirst(8))
+        return cohort
     }
 }
