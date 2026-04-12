@@ -2,9 +2,9 @@ import SwiftUI
 
 /// Primary surfaces of the app — mirrors `MainTab` on Android.
 ///
-/// The declared order drives the TabView tab order, matching the Android
-/// bottom navigation so users moving between platforms see identical
-/// placement.
+/// The declared order drives the floating bar tab order, matching the
+/// Android bottom navigation so users moving between platforms see
+/// identical placement.
 public enum MainTab: Int, CaseIterable, Identifiable {
     case chats
     case wallet
@@ -41,49 +41,103 @@ public enum MainTab: Int, CaseIterable, Identifiable {
     }
 }
 
-/// Bottom-bar host mirror of `MainScaffold.kt`.
+/// Inset the floating bar reserves at the bottom of scrollable tab
+/// content so the last row doesn't hide behind the translucent bar.
+/// Mirrors the `LocalFloatingBarPadding` CompositionLocal on Android.
+public struct FloatingBarInsetKey: EnvironmentKey {
+    public static let defaultValue: CGFloat = 0
+}
+
+public extension EnvironmentValues {
+    var floatingBarInset: CGFloat {
+        get { self[FloatingBarInsetKey.self] }
+        set { self[FloatingBarInsetKey.self] = newValue }
+    }
+}
+
+/// Bottom-bar host that mirrors `MainScaffold.kt`.
 ///
-/// Uses `TabView` so each tab's state persists across switches (matching
-/// the Android behaviour where tab surfaces live inside the same Scaffold
-/// rather than being pushed/popped on a NavHost).
+/// The bar floats over the tab content — the content scrolls through
+/// the translucent layer rather than being pushed up. Corner radius
+/// matches the 16-pt button radius on the Welcome CTAs, not a Telegram
+/// pill shape.
 public struct MainScaffold<Content: View>: View {
     @State private var selected: MainTab = .chats
     let content: (MainTab) -> Content
+
+    private let barHeight: CGFloat = 64
+    private let barBottomMargin: CGFloat = 12
+    private let barHorizontalMargin: CGFloat = 16
 
     public init(@ViewBuilder content: @escaping (MainTab) -> Content) {
         self.content = content
     }
 
     public var body: some View {
-        TabView(selection: $selected) {
+        ZStack(alignment: .bottom) {
+            OkaiwaColors.black.ignoresSafeArea()
+
+            content(selected)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .environment(\.floatingBarInset, barHeight + barBottomMargin + 16)
+
+            FloatingNavBar(selected: $selected)
+                .frame(height: barHeight)
+                .padding(.horizontal, barHorizontalMargin)
+                .padding(.bottom, barBottomMargin)
+        }
+    }
+}
+
+private struct FloatingNavBar: View {
+    @Binding var selected: MainTab
+
+    var body: some View {
+        HStack(spacing: 0) {
             ForEach(MainTab.allCases) { tab in
-                content(tab)
-                    .tabItem {
-                        Label(tab.label, systemImage: selected == tab ? tab.systemIcon : tab.systemIconUnselected)
-                    }
-                    .tag(tab)
+                TabItem(tab: tab, isSelected: selected == tab) {
+                    selected = tab
+                }
+                .frame(maxWidth: .infinity)
             }
         }
-        .tint(OkaiwaColors.lime)
-        .onAppear {
-            // Match the Android bar: black background, lime selected
-            // label, muted gray unselected label. UIKit appearance APIs
-            // are the only way to style `TabView` before SwiftUI exposes
-            // a native tab appearance modifier.
-            let appearance = UITabBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = UIColor(OkaiwaColors.black)
-            appearance.shadowColor = UIColor(OkaiwaColors.blackBorder)
+        .background(
+            // `.ultraThinMaterial` gives the system's adaptive blur;
+            // we tint it with the elevated canvas at 78 % so the brand
+            // keeps its dark-first identity instead of the gray system
+            // glass. Rounded to 16 pt to match the Welcome CTAs.
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(OkaiwaColors.blackElevated.opacity(0.78))
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(OkaiwaColors.blackBorder.opacity(0.6), lineWidth: 1)
+        )
+    }
+}
 
-            for item in [appearance.stackedLayoutAppearance, appearance.inlineLayoutAppearance, appearance.compactInlineLayoutAppearance] {
-                item.normal.iconColor = UIColor(OkaiwaColors.muted)
-                item.normal.titleTextAttributes = [.foregroundColor: UIColor(OkaiwaColors.muted)]
-                item.selected.iconColor = UIColor(OkaiwaColors.lime)
-                item.selected.titleTextAttributes = [.foregroundColor: UIColor(OkaiwaColors.lime)]
+private struct TabItem: View {
+    let tab: MainTab
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(spacing: 4) {
+                Image(systemName: isSelected ? tab.systemIcon : tab.systemIconUnselected)
+                    .font(.system(size: 20, weight: isSelected ? .semibold : .regular))
+                Text(tab.label)
+                    .font(.system(size: 11, weight: isSelected ? .semibold : .medium))
             }
-
-            UITabBar.appearance().standardAppearance = appearance
-            UITabBar.appearance().scrollEdgeAppearance = appearance
+            .foregroundStyle(isSelected ? OkaiwaColors.lime : OkaiwaColors.muted)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 }
