@@ -1,0 +1,21 @@
+//
+//  Okaiwa.Release.xcconfig
+//  Release-specific overrides (App Store + TestFlight).
+//
+
+#include "Okaiwa.xcconfig"
+
+// Production bundle ID matches the Firebase iOS app.
+PRODUCT_BUNDLE_IDENTIFIER = io.okaiwa.ios
+
+// Aggressive optimizations for shipped binaries.
+GCC_OPTIMIZATION_LEVEL = s
+SWIFT_OPTIMIZATION_LEVEL = -O
+SWIFT_COMPILATION_MODE = wholemodule
+
+// Produce dSYM for symbolicated crash reports in App Store Connect.
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym
+
+// Strip debug symbols from the shipped binary.
+STRIP_INSTALLED_PRODUCT = YES
+COPY_PHASE_STRIP = YES

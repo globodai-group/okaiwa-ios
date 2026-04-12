@@ -1,0 +1,19 @@
+//
+//  Okaiwa.Debug.xcconfig
+//  Debug-specific overrides (sideloaded via Firebase App Distribution).
+//
+
+#include "Okaiwa.xcconfig"
+
+// Debug builds get a distinct bundle ID so the production and debug
+// apps can be installed side-by-side on a tester device. Matches the
+// Android applicationIdSuffix = ".debug" scheme.
+PRODUCT_BUNDLE_IDENTIFIER = io.okaiwa.ios.debug
+
+// Disable optimizations for readable stack traces.
+GCC_OPTIMIZATION_LEVEL = 0
+SWIFT_OPTIMIZATION_LEVEL = -Onone
+SWIFT_COMPILATION_MODE = singlefile
+
+// Include debug symbols in the dSYM for crash reports.
+DEBUG_INFORMATION_FORMAT = dwarf-with-dsym

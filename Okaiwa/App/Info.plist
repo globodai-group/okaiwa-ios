@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Okaiwa</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<!--
+	    CFBundleShortVersionString (marketing version) — semver, manual.
+	    Kept in sync with okaiwa-android app/build.gradle.kts versionName.
+	-->
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<!--
+	    CFBundleVersion (build number) — monotonic integer derived from
+	    `git rev-list --count HEAD`. Overwritten at build time by
+	    scripts/set-ios-build-number.sh so TestFlight / Firebase App
+	    Distribution uploads are always strictly increasing. Kept in
+	    sync with okaiwa-android versionCode.
+	-->
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+
+	<!-- Orientations — locked to portrait to match Android. -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<!-- Background modes required for silent push + VoIP calls. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>voip</string>
+	</array>
+
+	<!-- Privacy usage descriptions. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Okaiwa uses the camera to let you scan QR codes and share photos in conversations.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Okaiwa uses the microphone for encrypted voice calls and voice messages.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Okaiwa uses hashed phone numbers from your contacts to find friends already on Okaiwa. Your contacts are never uploaded in the clear.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Okaiwa uses Face ID to unlock the app and authorize crypto transactions.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Okaiwa uses the photo library to let you share images in conversations.</string>
+
+	<!-- App Transport Security — no cleartext in production. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+	</dict>
+
+	<!-- Scene manifest (SwiftUI). -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+
+	<!-- Status bar style (let SwiftUI preferredColorScheme drive it). -->
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<true/>
+</dict>
+</plist>

@@ -1,0 +1,42 @@
+//
+//  Okaiwa.xcconfig
+//  Build configuration — versioning and signing.
+//
+//  Mirrors the Android scheme:
+//    MARKETING_VERSION       ↔ versionName  (semver, manual)
+//    CURRENT_PROJECT_VERSION ↔ versionCode  (git commit count, auto)
+//
+//  The build number is overwritten by scripts/set-ios-build-number.sh
+//  at build time, which runs `git rev-list --count HEAD` to keep Android
+//  and iOS uploads in lock-step.
+//
+
+// Semantic version — bump manually for user-facing releases.
+MARKETING_VERSION = 1.0.0
+
+// Build number — placeholder; overwritten by set-ios-build-number.sh.
+// Xcode won't accept a non-numeric value, so we seed with 1.
+CURRENT_PROJECT_VERSION = 1
+
+// Bundle identifier matches the Firebase iOS app created via CLI.
+PRODUCT_BUNDLE_IDENTIFIER = io.okaiwa.ios
+
+// Minimum iOS version — Secure Enclave + CryptoKit require iOS 17+.
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+
+// Apple Team ID is injected via environment variable during archive:
+//   DEVELOPMENT_TEAM = $(OKAIWA_APPLE_TEAM_ID)
+// The team ID is never committed to the repo — it lives in CI secrets
+// and on each developer's local .xcconfig.private file.
+DEVELOPMENT_TEAM = $(OKAIWA_APPLE_TEAM_ID)
+
+// Automatic code signing — Xcode fetches the development profile.
+CODE_SIGN_STYLE = Automatic
+
+// Swift language version pinned to match the Package.swift toolchain.
+SWIFT_VERSION = 5.9
+
+// Build settings shared across Debug and Release.
+SWIFT_STRICT_CONCURRENCY = complete
+CLANG_WARN_STRICT_PROTOTYPES = YES
+GCC_TREAT_WARNINGS_AS_ERRORS = NO
