@@ -1,9 +1,19 @@
 import SwiftUI
 
-/// OTP verification screen — mirrors `OtpVerificationScreen.kt` on Android.
+/// OTP verification screen — mirrors `OtpVerificationScreen.kt`.
 ///
-/// Six digit slots backed by a single hidden TextField. Auto-submits
-/// as soon as 6 digits are entered. 60-second resend countdown.
+/// A full-width invisible `TextField` captures input behind the slot row;
+/// `.allowsHitTesting(false)` on the slot overlay lets taps, long-press,
+/// and paste gestures fall through to the field. Because the field is
+/// full width:
+///   - iOS paste from clipboard populates all six slots at once.
+///   - `.textContentType(.oneTimeCode)` triggers SMS autofill.
+///   - The paste menu appears anywhere over the slot row, not just in
+///     a 1-pixel hit target.
+///
+/// Each slot uses `.frame(maxWidth: .infinity).aspectRatio(...)` so the
+/// six boxes distribute the available width equally — no more "5 uniform
+/// + 1 squeezed" layout on narrow devices.
 public struct OtpVerificationView: View {
     let phoneNumberDisplay: String
     let onBack: () -> Void
@@ -51,7 +61,6 @@ public struct OtpVerificationView: View {
 
                 Spacer().frame(height: 40)
 
-                // Title block
                 VStack(spacing: 12) {
                     Text("Code à 6 chiffres")
                         .font(.system(size: 22, weight: .semibold))
@@ -69,25 +78,35 @@ public struct OtpVerificationView: View {
 
                 Spacer().frame(height: 40)
 
-                // Slots
-                OtpSlotsRow(otp: otp, hasError: errorMessage != nil)
-                    .padding(.horizontal, 24)
-
-                // Hidden capture field
-                TextField("", text: $otp)
-                    .keyboardType(.numberPad)
-                    .textContentType(.oneTimeCode)
-                    .foregroundStyle(.clear)
-                    .tint(.clear)
-                    .frame(width: 1, height: 1)
-                    .opacity(0.01)
-                    .focused($otpFocused)
-                    .onChange(of: otp) { _, newValue in
-                        otp = String(newValue.filter(\.isNumber).prefix(6))
-                        if otp.count == 6 && !isLoading {
-                            onSubmit(otp)
+                // Capture field + visual slots overlay.
+                ZStack {
+                    // Invisible full-width capture field. foregroundStyle
+                    // .clear + tint .clear hide the text + cursor; opacity
+                    // is left at 1 so the system still routes taps,
+                    // long-press, paste menu, and SMS autofill here.
+                    TextField("", text: $otp)
+                        .keyboardType(.numberPad)
+                        .textContentType(.oneTimeCode)
+                        .foregroundStyle(.clear)
+                        .tint(.clear)
+                        .multilineTextAlignment(.center)
+                        .focused($otpFocused)
+                        .onChange(of: otp) { _, newValue in
+                            let digits = String(newValue.filter(\.isNumber).prefix(6))
+                            if digits != otp {
+                                otp = digits
+                            }
+                            if otp.count == 6 && !isLoading {
+                                onSubmit(otp)
+                            }
                         }
-                    }
+
+                    // Visual slots sit on top, non-interactive so the
+                    // TextField below still receives gestures.
+                    OtpSlotsRow(otp: otp, hasError: errorMessage != nil)
+                        .allowsHitTesting(false)
+                }
+                .padding(.horizontal, 24)
 
                 Spacer().frame(height: 24)
 
@@ -101,7 +120,6 @@ public struct OtpVerificationView: View {
                     Spacer().frame(height: 16)
                 }
 
-                // Resend
                 HStack {
                     Spacer()
                     if secondsRemaining > 0 {
@@ -122,7 +140,6 @@ public struct OtpVerificationView: View {
                     Spacer()
                 }
 
-                // Dev hint — debug builds only.
                 if DevConfig.isDebug {
                     Spacer().frame(height: 16)
                     Text("DEV — utilisez 000000 pour passer")
@@ -135,7 +152,6 @@ public struct OtpVerificationView: View {
 
                 Spacer()
 
-                // Submit
                 Button {
                     guard otp.count == 6 else { return }
                     onSubmit(otp)
@@ -160,7 +176,12 @@ public struct OtpVerificationView: View {
             }
         }
         .onAppear {
-            otpFocused = true
+            // Slight delay so the view is fully laid out before we request
+            // focus, otherwise the keyboard sometimes refuses to show on
+            // first appearance.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                otpFocused = true
+            }
             startTimer()
         }
         .onDisappear {
@@ -194,10 +215,10 @@ private struct OtpSlotsRow: View {
                     return idx < otp.endIndex ? String(otp[idx]) : ""
                 }()
                 let isFilled = !digit.isEmpty
-                let isFocused = index == otp.count && !hasError
+                let isCursor = index == otp.count && !hasError
                 let borderColor: Color = {
                     if hasError { return OkaiwaColors.error }
-                    if isFocused || isFilled { return OkaiwaColors.lime }
+                    if isCursor || isFilled { return OkaiwaColors.lime }
                     return OkaiwaColors.blackBorder
                 }()
 
@@ -210,7 +231,10 @@ private struct OtpSlotsRow: View {
                         .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(OkaiwaColors.white)
                 }
-                .frame(width: 48, height: 56)
+                // frame + aspectRatio gives every slot the same share of
+                // the available width, mirroring Android's weight(1f).
+                .frame(maxWidth: .infinity)
+                .aspectRatio(48.0 / 56.0, contentMode: .fit)
             }
         }
         .frame(maxWidth: .infinity)
