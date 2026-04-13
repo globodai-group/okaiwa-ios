@@ -36,7 +36,18 @@ final class IdentityAuthService {
 
     func register(phoneE164: String) async throws {
         let phoneHash = PhoneHasher.hashE164(phoneE164)
-        let bundle = MockSignalKeyBundle.generate()
+
+        // Real libsignal keypair + signed pre-key. Persisted into the
+        // shared `InMemorySignalProtocolStore` by `SignalIdentityKeys`
+        // itself so the session layer can encrypt/decrypt later
+        // without re-deriving any material.
+        let bundle: SignalIdentityKeys.Bundle
+        do {
+            bundle = try SignalIdentityKeys.generate()
+        } catch {
+            logger.error("Signal key generation failed: \(error.localizedDescription, privacy: .public)")
+            throw AppError.keyError(reason: error.localizedDescription)
+        }
 
         let request = RegisterRequest(
             phoneHash: phoneHash,

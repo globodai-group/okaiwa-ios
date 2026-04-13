@@ -28,6 +28,23 @@ let package = Package(
         // .package(path: "../okaiwa-wallet-core/swift"),
         // .package(path: "../okaiwa-crypto-utils/swift"),
         // .package(path: "../okaiwa-server/clients/swift"),
+
+        // Signal Foundation's official Swift bindings for the Signal
+        // Protocol. Provides IdentityKeyPair, SignedPreKeyRecord,
+        // session stores and the signalEncrypt/signalDecrypt entry
+        // points used by the chat layer. Pinned to a confirmed stable
+        // tag on github.com/signalapp/libsignal (latest verified at
+        // v0.92.1 on 2026-04-09).
+        .package(url: "https://github.com/signalapp/libsignal.git", from: "0.92.1"),
+
+        // Trust Wallet's wallet-core, distributed as an XCFramework
+        // via SPM. Provides HDWallet (BIP-39 mnemonic) and CoinType-
+        // driven address derivation for ETH/BTC/SOL. Pinned against
+        // the binary target URL published by the project. Note that
+        // the upstream Package.swift on tag 4.6.3 still references
+        // the 4.2.9 XCFramework zip at runtime — see the release
+        // notes on github.com/trustwallet/wallet-core for context.
+        .package(url: "https://github.com/trustwallet/wallet-core.git", from: "4.2.9"),
     ],
     targets: [
         // MARK: - Core
@@ -45,6 +62,8 @@ let package = Package(
             dependencies: [
                 "OkaiwaCore",
                 "OkaiwaShared",
+                .product(name: "LibSignalClient", package: "libsignal"),
+                .product(name: "WalletCore", package: "wallet-core"),
             ],
             path: "Okaiwa/Features"
         ),

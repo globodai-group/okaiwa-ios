@@ -37,7 +37,18 @@ public final class WalletOnboardingViewModel {
     public func onSecurityTipsAccepted() {
         switch method {
         case .seedPhrase:
-            mnemonic = MockMnemonicGenerator.generate24()
+            // Real BIP-39 mnemonic from wallet-core. If the underlying
+            // HDWallet allocation fails we fall back to an empty
+            // mnemonic — the UI treats that as "stay on the security
+            // tips screen" and surfaces the generic wallet-error
+            // alert next frame. That matches the Android behaviour
+            // (Result.failure in the Kotlin twin).
+            do {
+                mnemonic = try WalletMnemonicGenerator.generate24()
+            } catch {
+                mnemonic = []
+                return
+            }
             verifyIndices = [
                 Int.random(in: 2...7),
                 Int.random(in: 10...15),

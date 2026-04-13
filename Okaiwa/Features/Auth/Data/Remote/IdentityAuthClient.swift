@@ -116,7 +116,7 @@ actor IdentityAuthClient {
 struct RegisterRequest: Codable {
     let phoneHash: String
     let identityPublicKey: String
-    let signedPreKey: MockSignalKeyBundle.SignedPreKey
+    let signedPreKey: SignalIdentityKeys.SignedPreKey
     let registrationId: Int
     let username: String?
 }
