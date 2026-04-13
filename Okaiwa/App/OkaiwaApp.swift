@@ -4,6 +4,7 @@
 import SwiftUI
 import UIKit
 import os
+import OkaiwaCore
 
 /// Main entry point for the Okaiwa application.
 ///
@@ -35,16 +36,25 @@ struct OkaiwaApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(container.authViewModel)
-                .environment(container.router)
-                .onAppear {
-                    ScreenSecurity.enable()
-                    registerForPushNotifications()
-                }
-                .onChange(of: scenePhase) { oldPhase, newPhase in
-                    handleScenePhaseChange(from: oldPhase, to: newPhase)
-                }
+            // Wrap the root view in `OkaiwaLocaleRoot` so the user's
+            // language override (Profile → Langue) propagates through
+            // the SwiftUI environment. `LocaleManager.shared` is
+            // injected as a single observable — any view inside the
+            // tree can call `setLocale(...)` and SwiftUI re-renders
+            // the whole subtree the same frame.
+            OkaiwaLocaleRoot {
+                ContentView()
+                    .environment(container.authViewModel)
+                    .environment(container.router)
+                    .onAppear {
+                        ScreenSecurity.enable()
+                        registerForPushNotifications()
+                    }
+                    .onChange(of: scenePhase) { oldPhase, newPhase in
+                        handleScenePhaseChange(from: oldPhase, to: newPhase)
+                    }
+            }
+            .environment(LocaleManager.shared)
         }
     }
 

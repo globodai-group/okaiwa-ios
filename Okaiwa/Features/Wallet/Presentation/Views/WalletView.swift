@@ -34,7 +34,7 @@ struct WalletView: View {
             }
             .padding(OkaiwaTheme.Spacing.md)
         }
-        .navigationTitle("Wallet")
+        .navigationTitle(L10n.key("wallet_tab_nav_title"))
         .task {
             await viewModel.loadWallets()
         }
@@ -181,7 +181,7 @@ struct WalletView: View {
             Button {
                 showSendSheet = true
             } label: {
-                Label("Send", systemImage: "arrow.up.circle.fill")
+                Label(L10n.key("wallet_action_send"), systemImage: "arrow.up.circle.fill")
                     .font(OkaiwaTheme.Typography.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, OkaiwaTheme.Spacing.sm)
@@ -192,7 +192,7 @@ struct WalletView: View {
             Button {
                 showReceiveSheet = true
             } label: {
-                Label("Receive", systemImage: "arrow.down.circle.fill")
+                Label(L10n.key("wallet_action_receive"), systemImage: "arrow.down.circle.fill")
                     .font(OkaiwaTheme.Typography.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, OkaiwaTheme.Spacing.sm)
@@ -206,7 +206,7 @@ struct WalletView: View {
 
     private var transactionSection: some View {
         VStack(alignment: .leading, spacing: OkaiwaTheme.Spacing.sm) {
-            Text("Recent Transactions")
+            Text(L10n.key("wallet_transactions_header"))
                 .font(OkaiwaTheme.Typography.headline)
 
             if viewModel.transactions.isEmpty {
@@ -215,7 +215,7 @@ struct WalletView: View {
                         .font(.system(size: 36))
                         .foregroundStyle(OkaiwaTheme.Colors.textTertiary)
 
-                    Text("No transactions yet")
+                    Text(L10n.key("wallet_transactions_empty"))
                         .font(OkaiwaTheme.Typography.callout)
                         .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
                 }
@@ -248,16 +248,16 @@ struct WalletView: View {
     private var sendSheet: some View {
         NavigationStack {
             Form {
-                Section("Recipient") {
-                    TextField("Address or ENS name", text: $viewModel.sendRecipient)
+                Section(L10n.key("wallet_send_recipient_section")) {
+                    TextField(L10n.key("wallet_send_recipient_placeholder"), text: $viewModel.sendRecipient)
                         .font(OkaiwaTheme.Typography.mono)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                 }
 
-                Section("Amount") {
+                Section(L10n.key("wallet_send_amount_section")) {
                     HStack {
-                        TextField("0.00", text: $viewModel.sendAmount)
+                        TextField(L10n.key("wallet_send_amount_placeholder"), text: $viewModel.sendAmount)
                             .keyboardType(.decimalPad)
 
                         Text(viewModel.selectedChain.nativeToken)
@@ -265,12 +265,12 @@ struct WalletView: View {
                     }
                 }
 
-                Section("Note (optional)") {
-                    TextField("What's this for?", text: $viewModel.sendNote)
+                Section(L10n.key("wallet_send_note_section")) {
+                    TextField(L10n.key("wallet_send_note_placeholder"), text: $viewModel.sendNote)
                 }
 
                 if case .readyToSend(let fee) = viewModel.sendState {
-                    Section("Estimated Fee") {
+                    Section(L10n.key("wallet_send_fee_section")) {
                         Text(fee)
                             .font(OkaiwaTheme.Typography.mono)
                     }
@@ -283,18 +283,18 @@ struct WalletView: View {
                     }
                 }
             }
-            .navigationTitle("Send \(viewModel.selectedChain.nativeToken)")
+            .navigationTitle(L10n.string("wallet_send_title_format", viewModel.selectedChain.nativeToken))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button(L10n.string("wallet_send_cancel")) {
                         showSendSheet = false
                         viewModel.resetSendState()
                     }
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Send") {
+                    Button(L10n.string("wallet_send_confirm")) {
                         Task { await viewModel.send() }
                     }
                     .disabled(viewModel.sendRecipient.isEmpty || viewModel.sendAmount.isEmpty)
@@ -344,18 +344,18 @@ struct WalletView: View {
                 Button {
                     UIPasteboard.general.string = viewModel.currentAddress
                 } label: {
-                    Label("Copy Address", systemImage: "doc.on.doc")
+                    Label(L10n.key("wallet_receive_copy_address"), systemImage: "doc.on.doc")
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(OkaiwaTheme.Colors.primaryFallback)
 
                 Spacer()
             }
-            .navigationTitle("Receive \(viewModel.selectedChain.nativeToken)")
+            .navigationTitle(L10n.string("wallet_receive_title_format", viewModel.selectedChain.nativeToken))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
+                    Button(L10n.string("wallet_receive_done")) {
                         showReceiveSheet = false
                     }
                 }
@@ -431,7 +431,9 @@ struct TransactionRow: View {
     }
 
     private var directionLabel: String {
-        direction == .sent ? "Sent" : "Received"
+        direction == .sent
+            ? L10n.string("wallet_tx_direction_sent")
+            : L10n.string("wallet_tx_direction_received")
     }
 
     private var directionSign: String {

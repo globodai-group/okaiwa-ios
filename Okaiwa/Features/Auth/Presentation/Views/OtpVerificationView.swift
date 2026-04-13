@@ -62,12 +62,15 @@ public struct OtpVerificationView: View {
                 Spacer().frame(height: 40)
 
                 VStack(spacing: 12) {
-                    Text("Code à 6 chiffres")
+                    Text(L10n.key("otp_title"))
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(OkaiwaColors.white)
                         .multilineTextAlignment(.center)
 
-                    Text("Nous venons d'envoyer un code par SMS au\n\(phoneNumberDisplay)")
+                    // `%@` is the recipient phone; the format string
+                    // already embeds the newline so both locales keep
+                    // the phone number on its own line.
+                    Text(L10n.string("otp_subtitle_format", phoneNumberDisplay))
                         .font(.system(size: 15))
                         .foregroundStyle(OkaiwaColors.whiteDim)
                         .multilineTextAlignment(.center)
@@ -123,7 +126,10 @@ public struct OtpVerificationView: View {
                 HStack {
                     Spacer()
                     if secondsRemaining > 0 {
-                        Text("Renvoyer le code dans \(secondsRemaining)s")
+                        // `%d` expands to the raw seconds — the format
+                        // string carries the unit suffix ("s") so the
+                        // English/French copy can reshape independently.
+                        Text(L10n.string("otp_resend_countdown_format", secondsRemaining))
                             .font(.system(size: 13))
                             .foregroundStyle(OkaiwaColors.muted)
                     } else {
@@ -132,7 +138,7 @@ public struct OtpVerificationView: View {
                             startTimer()
                             onResend()
                         } label: {
-                            Text("Renvoyer le code")
+                            Text(L10n.key("otp_resend_cta"))
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(OkaiwaColors.lime)
                         }
@@ -142,7 +148,7 @@ public struct OtpVerificationView: View {
 
                 if DevConfig.isDebug {
                     Spacer().frame(height: 16)
-                    Text("DEV — utilisez 000000 pour passer")
+                    Text(L10n.key("otp_dev_hint"))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(OkaiwaColors.lime)
                         .multilineTextAlignment(.center)
@@ -164,7 +170,7 @@ public struct OtpVerificationView: View {
                             ProgressView()
                                 .tint(OkaiwaColors.black)
                         } else {
-                            Text("Continuer")
+                            Text(L10n.key("otp_submit_cta"))
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(OkaiwaColors.black)
                         }

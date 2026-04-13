@@ -42,7 +42,7 @@ struct SettingsView: View {
             // About
             aboutSection
         }
-        .navigationTitle("Settings")
+        .navigationTitle(L10n.key("settings_nav_title"))
     }
 
     // MARK: - Security Score Section
@@ -102,7 +102,7 @@ struct SettingsView: View {
             }
             .frame(maxWidth: .infinity)
         } header: {
-            Text("Security Score")
+            Text(L10n.key("settings_section_security_score"))
         }
     }
 
@@ -141,7 +141,7 @@ struct SettingsView: View {
                 .padding(.vertical, OkaiwaTheme.Spacing.xxs)
             }
         } header: {
-            Text("Recommendations")
+            Text(L10n.key("settings_section_recommendations"))
         }
     }
 
@@ -150,30 +150,32 @@ struct SettingsView: View {
     private var privacySection: some View {
         Section {
             NavigationLink {
-                Text("Privacy Settings")
+                // TODO: PrivacySettingsView — placeholder kept
+                // non-localized until the real destination lands.
+                Text(verbatim: "Privacy Settings")
             } label: {
-                Label("Privacy", systemImage: "hand.raised.fill")
+                Label(L10n.key("settings_row_privacy"), systemImage: "hand.raised.fill")
             }
 
             NavigationLink {
-                Text("Blocked Contacts")
+                Text(verbatim: "Blocked Contacts")
             } label: {
-                Label("Blocked", systemImage: "nosign")
+                Label(L10n.key("settings_row_blocked"), systemImage: "nosign")
             }
 
             NavigationLink {
-                Text("Screen Security Settings")
+                Text(verbatim: "Screen Security Settings")
             } label: {
-                Label("Screen Security", systemImage: "eye.slash.fill")
+                Label(L10n.key("settings_row_screen_security"), systemImage: "eye.slash.fill")
             }
 
             NavigationLink {
-                Text("Disappearing Messages Default")
+                Text(verbatim: "Disappearing Messages Default")
             } label: {
-                Label("Disappearing Messages", systemImage: "timer")
+                Label(L10n.key("settings_row_disappearing"), systemImage: "timer")
             }
         } header: {
-            Text("Privacy & Security")
+            Text(L10n.key("settings_section_privacy"))
         }
     }
 
@@ -182,18 +184,18 @@ struct SettingsView: View {
     private var notificationsSection: some View {
         Section {
             NavigationLink {
-                Text("Notification Settings")
+                Text(verbatim: "Notification Settings")
             } label: {
-                Label("Notifications", systemImage: "bell.fill")
+                Label(L10n.key("settings_row_notifications"), systemImage: "bell.fill")
             }
 
             NavigationLink {
-                Text("Sound Settings")
+                Text(verbatim: "Sound Settings")
             } label: {
-                Label("Sounds", systemImage: "speaker.wave.2.fill")
+                Label(L10n.key("settings_row_sounds"), systemImage: "speaker.wave.2.fill")
             }
         } header: {
-            Text("Notifications")
+            Text(L10n.key("settings_section_notifications"))
         }
     }
 
@@ -202,18 +204,18 @@ struct SettingsView: View {
     private var appearanceSection: some View {
         Section {
             NavigationLink {
-                Text("Theme Settings")
+                Text(verbatim: "Theme Settings")
             } label: {
-                Label("Appearance", systemImage: "paintbrush.fill")
+                Label(L10n.key("settings_row_appearance"), systemImage: "paintbrush.fill")
             }
 
             NavigationLink {
-                Text("Chat Wallpaper")
+                Text(verbatim: "Chat Wallpaper")
             } label: {
-                Label("Wallpaper", systemImage: "photo.fill")
+                Label(L10n.key("settings_row_wallpaper"), systemImage: "photo.fill")
             }
         } header: {
-            Text("Appearance")
+            Text(L10n.key("settings_section_appearance"))
         }
     }
 
@@ -222,41 +224,41 @@ struct SettingsView: View {
     private var accountSection: some View {
         Section {
             NavigationLink {
-                Text("Linked Devices")
+                Text(verbatim: "Linked Devices")
             } label: {
-                Label("Linked Devices", systemImage: "laptopcomputer.and.iphone")
+                Label(L10n.key("settings_row_linked_devices"), systemImage: "laptopcomputer.and.iphone")
             }
 
             Button {
                 // Export identity keys
             } label: {
-                Label("Export Identity Keys", systemImage: "key.fill")
+                Label(L10n.key("settings_row_export_keys"), systemImage: "key.fill")
                     .foregroundStyle(OkaiwaTheme.Colors.textPrimary)
             }
 
             Button {
                 Task { await authViewModel.logout() }
             } label: {
-                Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
+                Label(L10n.key("settings_row_logout"), systemImage: "rectangle.portrait.and.arrow.right")
                     .foregroundStyle(OkaiwaTheme.Colors.warning)
             }
 
             Button {
                 showDeleteConfirmation = true
             } label: {
-                Label("Delete Account", systemImage: "trash.fill")
+                Label(L10n.key("settings_row_delete_account"), systemImage: "trash.fill")
                     .foregroundStyle(OkaiwaTheme.Colors.destructive)
             }
         } header: {
-            Text("Account")
+            Text(L10n.key("settings_section_account"))
         }
-        .alert("Delete Account", isPresented: $showDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
+        .alert(L10n.key("settings_delete_alert_title"), isPresented: $showDeleteConfirmation) {
+            Button(L10n.string("settings_delete_alert_cancel"), role: .cancel) {}
+            Button(L10n.string("settings_delete_alert_confirm"), role: .destructive) {
                 // Delete account flow
             }
         } message: {
-            Text("This will permanently delete your account, all messages, and wallet data. This action cannot be undone.")
+            Text(L10n.key("settings_delete_alert_body"))
         }
     }
 
@@ -265,24 +267,28 @@ struct SettingsView: View {
     private var aboutSection: some View {
         Section {
             HStack {
-                Text("Version")
+                Text(L10n.key("settings_row_version"))
                 Spacer()
                 Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
                     .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
             }
 
             NavigationLink {
-                Text("Open Source Licenses")
+                Text(verbatim: "Open Source Licenses")
             } label: {
-                Text("Licenses")
+                Text(L10n.key("settings_row_licenses"))
             }
 
-            Link("Privacy Policy", destination: URL(string: "https://okaiwa.io/privacy")!)
-            Link("Terms of Service", destination: URL(string: "https://okaiwa.io/terms")!)
+            Link(destination: URL(string: "https://okaiwa.io/privacy")!) {
+                Text(L10n.key("settings_row_privacy_link"))
+            }
+            Link(destination: URL(string: "https://okaiwa.io/terms")!) {
+                Text(L10n.key("settings_row_terms_link"))
+            }
         } header: {
-            Text("About")
+            Text(L10n.key("settings_section_about"))
         } footer: {
-            Text("Okaiwa is open source software licensed under AGPLv3.\nCopyright 2026 Globodai FZCO.")
+            Text(L10n.key("settings_about_footer"))
                 .font(OkaiwaTheme.Typography.caption2)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)

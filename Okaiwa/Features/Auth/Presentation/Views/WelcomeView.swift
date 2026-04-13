@@ -25,12 +25,12 @@ public struct WelcomeView: View {
                     .scaledToFit()
                     .frame(width: 180, height: 180)
 
-                Text("OKAIWA")
+                Text(L10n.key("app_wordmark"))
                     .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(OkaiwaColors.white)
                     .tracking(6)
 
-                Text("Messagerie chiffrée.\nWallet intégré.")
+                Text(L10n.key("welcome_tagline"))
                     .font(.system(size: 16))
                     .foregroundStyle(OkaiwaColors.whiteDim)
                     .multilineTextAlignment(.center)
@@ -42,7 +42,7 @@ public struct WelcomeView: View {
             // CTAs — pinned to the bottom.
             VStack(spacing: 12) {
                 Button(action: onCreateAccount) {
-                    Text("Créer un compte")
+                    Text(L10n.key("welcome_create_account_button"))
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(OkaiwaColors.black)
                         .frame(maxWidth: .infinity)
@@ -52,7 +52,7 @@ public struct WelcomeView: View {
                 }
 
                 Button(action: onSignIn) {
-                    Text("Se connecter")
+                    Text(L10n.key("welcome_sign_in_button"))
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(OkaiwaColors.lime)
                         .frame(maxWidth: .infinity)
@@ -63,7 +63,7 @@ public struct WelcomeView: View {
                         )
                 }
 
-                Text("En continuant, vous acceptez nos Conditions d'utilisation et notre Politique de confidentialité.")
+                Text(L10n.key("welcome_legal_disclaimer"))
                     .font(.system(size: 12))
                     .foregroundStyle(OkaiwaColors.muted)
                     .multilineTextAlignment(.center)

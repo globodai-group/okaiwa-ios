@@ -22,7 +22,7 @@ public struct WalletOnboardingView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Wallet")
+            Text(L10n.key("wallet_title"))
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(OkaiwaColors.white)
                 .padding(.horizontal, 24)
@@ -44,14 +44,14 @@ public struct WalletOnboardingView: View {
 
                     Spacer().frame(height: 24)
 
-                    Text("Votre wallet crypto")
+                    Text(L10n.key("wallet_onboarding_title"))
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(OkaiwaColors.white)
                         .multilineTextAlignment(.center)
 
                     Spacer().frame(height: 12)
 
-                    Text("Envoyez et recevez des cryptos directement dans vos conversations. Vos clés restent sur votre appareil.")
+                    Text(L10n.key("wallet_onboarding_subtitle"))
                         .font(.system(size: 15))
                         .foregroundStyle(OkaiwaColors.whiteDim)
                         .multilineTextAlignment(.center)
@@ -63,7 +63,7 @@ public struct WalletOnboardingView: View {
 
                 VStack(spacing: 12) {
                     Button(action: onCreateWallet) {
-                        Text("Créer un wallet")
+                        Text(L10n.key("wallet_onboarding_create_cta"))
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(OkaiwaColors.black)
                             .frame(maxWidth: .infinity)
@@ -73,7 +73,7 @@ public struct WalletOnboardingView: View {
                     }
 
                     Button(action: onImportWallet) {
-                        Text("Importer un wallet")
+                        Text(L10n.key("wallet_onboarding_import_cta"))
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(OkaiwaColors.lime)
                             .frame(maxWidth: .infinity)

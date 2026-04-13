@@ -68,7 +68,7 @@ public struct WalletOnboardingFlow: View {
                     )
                 case .ready:
                     ReadyStep(
-                        walletName: viewModel.walletName.isEmpty ? "Mon portefeuille" : viewModel.walletName,
+                        walletName: viewModel.walletName.isEmpty ? L10n.string("wallet_default_name") : viewModel.walletName,
                         onDismiss: onFinished,
                         onFundWallet: onFinished
                     )
@@ -81,7 +81,11 @@ public struct WalletOnboardingFlow: View {
 // MARK: - Shared controls
 
 private struct TopBar: View {
-    let title: String
+    // The title is a string-resource key — passing raw text here would
+    // bypass the localization pipeline. If a caller needs a dynamic
+    // title (very rare on this flow) add an overload rather than
+    // reverting to a plain `String`.
+    let titleKey: String
     let onBack: () -> Void
     var body: some View {
         HStack {
@@ -92,7 +96,7 @@ private struct TopBar: View {
                     .padding(12)
             }
             Spacer()
-            Text(title)
+            Text(L10n.key(titleKey))
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(OkaiwaColors.white)
             Spacer()
@@ -103,13 +107,13 @@ private struct TopBar: View {
 }
 
 private struct PrimaryButton: View {
-    let label: String
+    let labelKey: String
     let enabled: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Text(label)
+            Text(L10n.key(labelKey))
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(OkaiwaColors.black)
                 .frame(maxWidth: .infinity)
@@ -131,18 +135,18 @@ private struct MethodStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopBar(title: "Créer un nouveau portefeuille", onBack: onCancel)
+            TopBar(titleKey: "wallet_create_title", onBack: onCancel)
             MethodCard(
                 systemIcon: "key.horizontal.fill",
-                title: "Phrase secrète",
-                subtitle: "Afficher les détails",
-                badge: "Recommandé",
-                body: [
-                    "24 mots BIP-39 générés sur votre appareil. La seule façon de récupérer vos fonds.",
-                    "Sécurité : 256 bits d'entropie — la même norme que Ledger, Trezor, Signal.",
-                    "Peut être sauvegardée dans 1Password, Dashlane ou votre trousseau natif.",
+                titleKey: "wallet_method_seedphrase_title",
+                subtitleKey: "wallet_method_seedphrase_subtitle",
+                badgeKey: "wallet_method_seedphrase_badge",
+                bodyKeys: [
+                    "wallet_method_seedphrase_bullet_1",
+                    "wallet_method_seedphrase_bullet_2",
+                    "wallet_method_seedphrase_bullet_3",
                 ],
-                ctaLabel: "Créer",
+                ctaKey: "wallet_method_cta",
                 onClick: onPickSeedPhrase,
                 isPrimary: true
             )
@@ -152,15 +156,15 @@ private struct MethodStep: View {
 
             MethodCard(
                 systemIcon: "faceid",
-                title: "Clé d'accès",
-                subtitle: "Masquer les détails",
-                badge: "Beta",
-                body: [
-                    "Créez ou récupérez un portefeuille avec une empreinte digitale ou Face ID.",
-                    "Transaction : huit chaînes disponibles sans étapes supplémentaires.",
-                    "Frais : moins de 200 tokens moyens pour les transactions courantes.",
+                titleKey: "wallet_method_passkey_title",
+                subtitleKey: "wallet_method_passkey_subtitle",
+                badgeKey: "wallet_method_passkey_badge",
+                bodyKeys: [
+                    "wallet_method_passkey_bullet_1",
+                    "wallet_method_passkey_bullet_2",
+                    "wallet_method_passkey_bullet_3",
                 ],
-                ctaLabel: "Créer",
+                ctaKey: "wallet_method_cta",
                 onClick: onPickPasskey,
                 isPrimary: false
             )
@@ -172,18 +176,18 @@ private struct MethodStep: View {
 
 private struct MethodCard: View {
     let systemIcon: String
-    let title: String
-    let subtitle: String
-    let badge: String
-    let body: [String]
-    let ctaLabel: String
+    let titleKey: String
+    let subtitleKey: String
+    let badgeKey: String
+    let bodyKeys: [String]
+    let ctaKey: String
     let onClick: () -> Void
     let isPrimary: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if isPrimary {
-                Text(badge)
+                Text(L10n.key(badgeKey))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(OkaiwaColors.lime)
                     .padding(.horizontal, 10).padding(.vertical, 3)
@@ -202,9 +206,9 @@ private struct MethodCard: View {
                     )
                 VStack(alignment: .leading) {
                     HStack {
-                        Text(title).font(.system(size: 17, weight: .semibold)).foregroundStyle(OkaiwaColors.white)
+                        Text(L10n.key(titleKey)).font(.system(size: 17, weight: .semibold)).foregroundStyle(OkaiwaColors.white)
                         if !isPrimary {
-                            Text(badge)
+                            Text(L10n.key(badgeKey))
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(OkaiwaColors.muted)
                                 .padding(.horizontal, 6).padding(.vertical, 1)
@@ -212,20 +216,22 @@ private struct MethodCard: View {
                                 .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                         }
                     }
-                    Text(subtitle).font(.system(size: 12)).foregroundStyle(OkaiwaColors.muted)
+                    Text(L10n.key(subtitleKey)).font(.system(size: 12)).foregroundStyle(OkaiwaColors.muted)
                 }
                 Spacer()
-                Button(ctaLabel, action: onClick)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(OkaiwaColors.black)
-                    .padding(.horizontal, 18).padding(.vertical, 6)
-                    .background(OkaiwaColors.lime)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    .buttonStyle(.plain)
+                Button(action: onClick) {
+                    Text(L10n.key(ctaKey))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(OkaiwaColors.black)
+                        .padding(.horizontal, 18).padding(.vertical, 6)
+                        .background(OkaiwaColors.lime)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
             }
 
-            ForEach(body, id: \.self) { line in
-                Text(line)
+            ForEach(bodyKeys, id: \.self) { key in
+                Text(L10n.key(key))
                     .font(.system(size: 12))
                     .foregroundStyle(OkaiwaColors.whiteDim)
                     .lineSpacing(3)
@@ -246,19 +252,23 @@ private struct SecurityTipsStep: View {
     let onBack: () -> Void
 
     @State private var checks: [Bool] = [false, false, false]
-    private var tips: [String] {
+    /// Tip copy is tied to the creation method — seed-phrase branch
+    /// warns about losing 24 words, passkey branch warns about losing
+    /// Apple ID access. Returning keys (not resolved strings) lets the
+    /// locale switcher re-render the tips the moment the user flips it.
+    private var tipKeys: [String] {
         switch method {
         case .seedPhrase:
             return [
-                "La phrase secrète (24 mots) est la SEULE manière de récupérer mon portefeuille. Si je la perds, mes fonds sont perdus à jamais.",
-                "Je dois la conserver hors ligne — papier, coffre-fort, ou gestionnaire de mots de passe — et ne JAMAIS la partager.",
-                "Okaiwa n'a aucun moyen de récupérer ma phrase secrète à ma place. La sécurité dépend entièrement de moi.",
+                "wallet_security_tips_seed_1",
+                "wallet_security_tips_seed_2",
+                "wallet_security_tips_seed_3",
             ]
         case .passkey:
             return [
-                "La clé privée est générée dans la Secure Enclave de mon iPhone. Elle ne quitte jamais l'appareil en clair et ne sera accessible qu'avec mon empreinte ou Face ID.",
-                "La sauvegarde chiffrée est synchronisée via iCloud Keychain. Je peux donc récupérer mon wallet sur un nouveau téléphone en m'authentifiant avec mon Apple ID.",
-                "Si je supprime la clé d'accès ET que je perds l'accès à mon Apple ID, je perdrai mes fonds. Okaiwa n'a aucun backup de secours.",
+                "wallet_security_tips_passkey_1",
+                "wallet_security_tips_passkey_2",
+                "wallet_security_tips_passkey_3",
             ]
         }
     }
@@ -267,7 +277,7 @@ private struct SecurityTipsStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopBar(title: "Conseils de sécurité", onBack: onBack)
+            TopBar(titleKey: "wallet_security_tips_title", onBack: onBack)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     Spacer().frame(height: 20)
@@ -281,21 +291,21 @@ private struct SecurityTipsStep: View {
                         )
                         .frame(maxWidth: .infinity, alignment: .center)
                     Spacer().frame(height: 20)
-                    Text("Votre phrase secrète est la clé de votre portefeuille")
+                    Text(L10n.key("wallet_security_tips_header"))
                         .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(OkaiwaColors.white)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                     Spacer().frame(height: 6)
-                    Text("Cochez toutes les cases pour confirmer que vous comprenez l'importance de la phrase secrète.")
+                    Text(L10n.key("wallet_security_tips_subtitle"))
                         .font(.system(size: 13))
                         .foregroundStyle(OkaiwaColors.muted)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                     Spacer().frame(height: 20)
 
-                    ForEach(Array(tips.enumerated()), id: \.offset) { index, text in
-                        TipRow(text: text, isChecked: checks[index], onToggle: {
+                    ForEach(Array(tipKeys.enumerated()), id: \.offset) { index, key in
+                        TipRow(textKey: key, isChecked: checks[index], onToggle: {
                             checks[index].toggle()
                         })
                         .padding(.bottom, 10)
@@ -304,14 +314,14 @@ private struct SecurityTipsStep: View {
                 .padding(.horizontal, 24)
             }
 
-            PrimaryButton(label: "Continuer", enabled: allChecked, action: onAccept)
+            PrimaryButton(labelKey: "wallet_security_tips_continue_cta", enabled: allChecked, action: onAccept)
                 .padding(.horizontal, 24).padding(.vertical, 16)
         }
     }
 }
 
 private struct TipRow: View {
-    let text: String
+    let textKey: String
     let isChecked: Bool
     let onToggle: () -> Void
     var body: some View {
@@ -327,7 +337,7 @@ private struct TipRow: View {
                             .foregroundStyle(OkaiwaColors.black)
                             .opacity(isChecked ? 1 : 0)
                     )
-                Text(text)
+                Text(L10n.key(textKey))
                     .font(.system(size: 13))
                     .foregroundStyle(OkaiwaColors.white)
                     .multilineTextAlignment(.leading)
@@ -355,10 +365,10 @@ private struct SeedPhraseDisplayStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopBar(title: "Votre phrase secrète", onBack: onBack)
+            TopBar(titleKey: "wallet_seed_display_title", onBack: onBack)
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    WarningBanner(text: "Notez ces 24 mots dans l'ordre et gardez-les hors ligne. Personne — y compris Okaiwa — ne peut les récupérer à votre place.")
+                    WarningBanner(textKey: "wallet_seed_display_warning")
 
                     LazyVGrid(columns: columns, spacing: 8) {
                         ForEach(Array(mnemonic.enumerated()), id: \.offset) { i, w in
@@ -368,7 +378,7 @@ private struct SeedPhraseDisplayStep: View {
 
                     SecondaryAction(
                         systemIcon: "key.fill",
-                        label: savedToPasswordManager ? "Sauvegardée ✓" : "Enregistrer dans un gestionnaire",
+                        labelKey: savedToPasswordManager ? "wallet_seed_display_saved" : "wallet_seed_display_save_cta",
                         action: {
                             saveToKeychain(mnemonic.joined(separator: " "))
                             onSaved()
@@ -377,7 +387,7 @@ private struct SeedPhraseDisplayStep: View {
 
                     SecondaryAction(
                         systemIcon: "doc.on.doc",
-                        label: "Copier dans le presse-papiers",
+                        labelKey: "wallet_seed_display_copy_cta",
                         action: { UIPasteboard.general.string = mnemonic.joined(separator: " ") }
                     )
                 }
@@ -385,7 +395,7 @@ private struct SeedPhraseDisplayStep: View {
                 .padding(.top, 8)
             }
 
-            PrimaryButton(label: "J'ai sauvegardé ma phrase", enabled: true, action: onContinue)
+            PrimaryButton(labelKey: "wallet_seed_display_continue_cta", enabled: true, action: onContinue)
                 .padding(.horizontal, 24).padding(.vertical, 16)
         }
     }
@@ -425,12 +435,12 @@ private struct SeedWordChip: View {
 }
 
 private struct WarningBanner: View {
-    let text: String
+    let textKey: String
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(Color.orange)
-            Text(text)
+            Text(L10n.key(textKey))
                 .font(.system(size: 12))
                 .foregroundStyle(OkaiwaColors.white)
                 .lineSpacing(4)
@@ -444,13 +454,13 @@ private struct WarningBanner: View {
 
 private struct SecondaryAction: View {
     let systemIcon: String
-    let label: String
+    let labelKey: String
     let action: () -> Void
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: systemIcon).foregroundStyle(OkaiwaColors.lime)
-                Text(label).font(.system(size: 14, weight: .medium)).foregroundStyle(OkaiwaColors.white)
+                Text(L10n.key(labelKey)).font(.system(size: 14, weight: .medium)).foregroundStyle(OkaiwaColors.white)
                 Spacer()
             }
             .padding(12)
@@ -488,16 +498,20 @@ private struct SeedPhraseVerifyStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopBar(title: "Vérifier la phrase", onBack: onBack)
+            TopBar(titleKey: "wallet_seed_verify_title", onBack: onBack)
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Sélectionnez les mots correspondants pour confirmer que vous avez sauvegardé votre phrase secrète.")
+                    Text(L10n.key("wallet_seed_verify_instruction"))
                         .font(.system(size: 13))
                         .foregroundStyle(OkaiwaColors.muted)
                         .lineSpacing(4)
 
                     ForEach(Array(challenges.enumerated()), id: \.offset) { cIdx, challenge in
-                        Text("Mot #\(challenge.position)")
+                        // Word position uses `%d` — NumberFormatter
+                        // would localize thousand separators etc., but
+                        // since positions are always 1–24 the plain
+                        // `%d` is fine.
+                        Text(L10n.string("wallet_seed_verify_word_format", challenge.position))
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(OkaiwaColors.white)
 
@@ -528,7 +542,7 @@ private struct SeedPhraseVerifyStep: View {
                 }
                 .padding(.horizontal, 24)
             }
-            PrimaryButton(label: "Continuer", enabled: allCorrect, action: onSuccess)
+            PrimaryButton(labelKey: "wallet_seed_verify_continue_cta", enabled: allCorrect, action: onSuccess)
                 .padding(.horizontal, 24).padding(.vertical, 16)
         }
     }
@@ -550,7 +564,7 @@ private struct PasskeyCreationStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopBar(title: "Clé d'accès", onBack: onBack)
+            TopBar(titleKey: "wallet_passkey_title", onBack: onBack)
 
             VStack(spacing: 0) {
                 Spacer().frame(height: 24)
@@ -568,14 +582,14 @@ private struct PasskeyCreationStep: View {
 
                 Spacer().frame(height: 24)
 
-                Text("Créez votre clé d'accès")
+                Text(L10n.key("wallet_passkey_header"))
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(OkaiwaColors.white)
                     .multilineTextAlignment(.center)
 
                 Spacer().frame(height: 8)
 
-                Text("Votre iPhone va vous demander de confirmer avec Face ID ou Touch ID. La clé privée reste dans la Secure Enclave — Okaiwa ne la voit jamais.")
+                Text(L10n.key("wallet_passkey_subtitle"))
                     .font(.system(size: 13))
                     .foregroundStyle(OkaiwaColors.muted)
                     .multilineTextAlignment(.center)
@@ -586,16 +600,16 @@ private struct PasskeyCreationStep: View {
 
                 VStack(spacing: 0) {
                     PasskeyBenefitRow(
-                        title: "Génération matérielle",
-                        subtitle: "Clé signée par la Secure Enclave, non exportable."
+                        titleKey: "wallet_passkey_benefit_1_title",
+                        subtitleKey: "wallet_passkey_benefit_1_subtitle"
                     )
                     PasskeyBenefitRow(
-                        title: "Sauvegarde cloud chiffrée",
-                        subtitle: "Sync iCloud Keychain pour la récupération multi-appareil."
+                        titleKey: "wallet_passkey_benefit_2_title",
+                        subtitleKey: "wallet_passkey_benefit_2_subtitle"
                     )
                     PasskeyBenefitRow(
-                        title: "Pas de phrase à retenir",
-                        subtitle: "Biométrie suffit — aucun mot de passe ni mnémonique à noter."
+                        titleKey: "wallet_passkey_benefit_3_title",
+                        subtitleKey: "wallet_passkey_benefit_3_subtitle"
                     )
                 }
                 .padding(.horizontal, 24)
@@ -604,7 +618,7 @@ private struct PasskeyCreationStep: View {
             }
 
             PrimaryButton(
-                label: isCreating ? "Création…" : "Créer avec biométrie",
+                labelKey: isCreating ? "wallet_passkey_creating" : "wallet_passkey_create_cta",
                 enabled: !isCreating,
                 action: {
                     isCreating = true
@@ -624,8 +638,8 @@ private struct PasskeyCreationStep: View {
 }
 
 private struct PasskeyBenefitRow: View {
-    let title: String
-    let subtitle: String
+    let titleKey: String
+    let subtitleKey: String
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -633,10 +647,10 @@ private struct PasskeyBenefitRow: View {
                 .font(.system(size: 18))
                 .foregroundStyle(OkaiwaColors.lime)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(L10n.key(titleKey))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(OkaiwaColors.white)
-                Text(subtitle)
+                Text(L10n.key(subtitleKey))
                     .font(.system(size: 12))
                     .foregroundStyle(OkaiwaColors.muted)
                     .lineSpacing(4)
@@ -659,24 +673,24 @@ private struct NameWalletStep: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            TopBar(title: "Définir le nom du portefeuille", onBack: onBack)
+            TopBar(titleKey: "wallet_name_title", onBack: onBack)
             VStack(alignment: .leading, spacing: 8) {
-                Text("Nom du portefeuille")
+                Text(L10n.key("wallet_name_field_label"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(OkaiwaColors.muted)
                 TextField("", text: Binding(get: { name }, set: { if $0.count <= 24 { onNameChanged($0) } }),
-                          prompt: Text("Mon portefeuille principal").foregroundStyle(OkaiwaColors.placeholder))
+                          prompt: Text(L10n.key("wallet_name_field_placeholder")).foregroundStyle(OkaiwaColors.placeholder))
                     .foregroundStyle(OkaiwaColors.white)
                     .tint(OkaiwaColors.lime)
                     .padding(14)
                     .background(OkaiwaColors.blackElevated)
                     .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(OkaiwaColors.blackBorder, lineWidth: 1))
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                Text("Entre 4 et 24 caractères.").font(.system(size: 12)).foregroundStyle(OkaiwaColors.muted)
+                Text(L10n.key("wallet_name_field_hint")).font(.system(size: 12)).foregroundStyle(OkaiwaColors.muted)
                 Spacer()
             }
             .padding(.horizontal, 24).padding(.top, 8)
-            PrimaryButton(label: "Terminé", enabled: isValid, action: onConfirm)
+            PrimaryButton(labelKey: "wallet_name_done_cta", enabled: isValid, action: onConfirm)
                 .padding(.horizontal, 24).padding(.vertical, 16)
         }
     }
@@ -693,13 +707,15 @@ private struct ReadyStep: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                Button("Ignorer", action: onDismiss)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(OkaiwaColors.white)
-                    .padding(.horizontal, 14).padding(.vertical, 8)
-                    .background(OkaiwaColors.blackElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .buttonStyle(.plain)
+                Button(action: onDismiss) {
+                    Text(L10n.key("wallet_ready_skip_cta"))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(OkaiwaColors.white)
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .background(OkaiwaColors.blackElevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                }
+                .buttonStyle(.plain)
             }
             .padding(16)
 
@@ -714,21 +730,24 @@ private struct ReadyStep: View {
                         .foregroundStyle(OkaiwaColors.lime)
                 )
             Spacer().frame(height: 20)
-            Text("Parfait !\n\(walletName) est prêt.")
+            // `%@` → the user's chosen wallet name. The format string
+            // owns the newline + punctuation so each locale can move
+            // those around without touching the view.
+            Text(L10n.string("wallet_ready_title_format", walletName))
                 .font(.system(size: 22, weight: .bold))
                 .foregroundStyle(OkaiwaColors.white)
                 .multilineTextAlignment(.center)
                 .lineSpacing(6)
             Spacer().frame(height: 8)
-            Text("Ajoutez des fonds pour commencer à envoyer et recevoir.")
+            Text(L10n.key("wallet_ready_subtitle"))
                 .font(.system(size: 13))
                 .foregroundStyle(OkaiwaColors.muted)
                 .multilineTextAlignment(.center)
             Spacer()
 
             VStack(spacing: 8) {
-                PrimaryButton(label: "Alimentez votre portefeuille", enabled: true, action: onFundWallet)
-                Text("Dépôt depuis Binance, Coinbase, ou tout wallet externe.")
+                PrimaryButton(labelKey: "wallet_ready_fund_cta", enabled: true, action: onFundWallet)
+                Text(L10n.key("wallet_ready_fund_hint"))
                     .font(.system(size: 12))
                     .foregroundStyle(OkaiwaColors.muted)
                     .multilineTextAlignment(.center)

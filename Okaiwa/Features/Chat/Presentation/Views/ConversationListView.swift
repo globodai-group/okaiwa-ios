@@ -68,7 +68,7 @@ private struct TopBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Text("Okaiwa")
+            Text(L10n.key("app_name"))
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(OkaiwaColors.white)
                 .padding(.leading, 24)
@@ -101,11 +101,11 @@ private struct EmptyConversationsView: View {
                 .font(.system(size: 52, weight: .light))
                 .foregroundStyle(OkaiwaColors.muted)
 
-            Text("Aucune conversation")
+            Text(L10n.key("conversations_empty_title"))
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(OkaiwaColors.white)
 
-            Text("Commencez une conversation chiffrée avec un contact.")
+            Text(L10n.key("conversations_empty_subtitle"))
                 .font(.system(size: 14))
                 .foregroundStyle(OkaiwaColors.muted)
                 .multilineTextAlignment(.center)

@@ -4,6 +4,12 @@ import PackageDescription
 
 let package = Package(
     name: "Okaiwa",
+    // Development-language base. Every `Localizable.strings` entry
+    // gets a guaranteed French fallback — if the runtime locale points
+    // at a language we haven't shipped yet (e.g. Spanish), SwiftUI
+    // resolves against this table rather than the English twin. See
+    // `LocaleManager` for the override path.
+    defaultLocalization: "fr",
     platforms: [
         .iOS(.v17)
     ],
@@ -53,7 +59,15 @@ let package = Package(
             dependencies: [
                 "OkaiwaShared",
             ],
-            path: "Okaiwa/Core"
+            path: "Okaiwa/Core",
+            // `.process("Resources")` runs the localization pipeline on
+            // every `*.lproj/Localizable.strings` file under this
+            // directory, generating a `Localizable.strings` per locale
+            // in the module bundle. AppError.swift resolves copy via
+            // `String(localized:, bundle: .module)`.
+            resources: [
+                .process("Resources"),
+            ]
         ),
 
         // MARK: - Features
@@ -65,7 +79,15 @@ let package = Package(
                 .product(name: "LibSignalClient", package: "libsignal"),
                 .product(name: "WalletCore", package: "wallet-core"),
             ],
-            path: "Okaiwa/Features"
+            path: "Okaiwa/Features",
+            // Same resource-bundle mechanism as OkaiwaCore. Every
+            // `LocalizedStringKey("…")` and `String(localized: "…")`
+            // site in Features/* resolves against `Bundle.module` for
+            // OkaiwaFeatures, which picks up the localized strings
+            // processed from `Resources/en.lproj` and `Resources/fr.lproj`.
+            resources: [
+                .process("Resources"),
+            ]
         ),
 
         // MARK: - Shared utilities

@@ -74,12 +74,12 @@ public struct PhoneNumberView: View {
 
                 // Title block
                 VStack(spacing: 12) {
-                    Text(mode == .register ? "Votre numéro de téléphone" : "Connexion")
+                    Text(L10n.key(mode == .register ? "phone_entry_title_register" : "phone_entry_title_login"))
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(OkaiwaColors.white)
                         .multilineTextAlignment(.center)
 
-                    Text("Confirmez votre indicatif national\net entrez votre numéro de téléphone.")
+                    Text(L10n.key("phone_entry_subtitle"))
                         .font(.system(size: 15))
                         .foregroundStyle(OkaiwaColors.whiteDim)
                         .multilineTextAlignment(.center)
@@ -114,15 +114,15 @@ public struct PhoneNumberView: View {
                         // accent panel + a primary CTA that flips to
                         // Register without asking the user to retype.
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Aucun compte Okaiwa avec ce numéro.")
+                            Text(L10n.key("phone_entry_not_found_title"))
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(OkaiwaColors.white)
-                            Text("Vous n'êtes pas encore inscrit. Vous pouvez créer un compte avec ce numéro en un seul geste.")
+                            Text(L10n.key("phone_entry_not_found_body"))
                                 .font(.system(size: 13))
                                 .foregroundStyle(OkaiwaColors.whiteDim)
                                 .lineSpacing(3)
                             Button(action: onCreateAccountFromLogin) {
-                                Text("Créer un compte avec ce numéro")
+                                Text(L10n.key("phone_entry_not_found_cta"))
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(OkaiwaColors.black)
                                     .frame(maxWidth: .infinity)
@@ -192,10 +192,10 @@ private struct CountryField: View {
                 Text(country.flagEmoji)
                     .font(.system(size: 22))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Pays")
+                    Text(L10n.key("phone_entry_country_label"))
                         .font(.system(size: 11))
                         .foregroundStyle(OkaiwaColors.muted)
-                    Text(country.name)
+                    Text(country.localizedName)
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(OkaiwaColors.white)
                 }
@@ -225,7 +225,7 @@ private struct PhoneField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Numéro de téléphone")
+            Text(L10n.key("phone_entry_number_label"))
                 .font(.system(size: 12))
                 .foregroundStyle(OkaiwaColors.lime)
 
@@ -269,7 +269,7 @@ private struct SyncContactsToggle: View {
                 Image(systemName: checked ? "checkmark.square.fill" : "square")
                     .font(.system(size: 20))
                     .foregroundStyle(checked ? OkaiwaColors.lime : OkaiwaColors.blackBorder)
-                Text("Synchroniser les contacts")
+                Text(L10n.key("phone_entry_sync_contacts"))
                     .font(.system(size: 15))
                     .foregroundStyle(OkaiwaColors.white)
                 Spacer()

@@ -48,11 +48,11 @@ struct LoginView: View {
                 .foregroundStyle(OkaiwaTheme.Colors.primaryFallback)
                 .padding(.top, OkaiwaTheme.Spacing.xxxl)
 
-            Text("Okaiwa")
+            Text(L10n.key("app_name"))
                 .font(OkaiwaTheme.Typography.largeTitle)
                 .foregroundStyle(OkaiwaTheme.Colors.textPrimary)
 
-            Text("Secure Messenger & Wallet")
+            Text(L10n.key("legacy_login_tagline"))
                 .font(OkaiwaTheme.Typography.subheadline)
                 .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
         }
@@ -90,19 +90,28 @@ struct LoginView: View {
 
     private var welcomeContent: some View {
         VStack(spacing: OkaiwaTheme.Spacing.lg) {
-            featureRow(icon: "lock.shield.fill", title: "End-to-End Encrypted",
-                       subtitle: "Messages secured with the Signal Protocol")
+            featureRow(
+                icon: "lock.shield.fill",
+                titleKey: "legacy_login_feature_encrypted_title",
+                subtitleKey: "legacy_login_feature_encrypted_subtitle"
+            )
 
-            featureRow(icon: "creditcard.fill", title: "Built-in Wallet",
-                       subtitle: "Send and receive crypto without leaving the chat")
+            featureRow(
+                icon: "creditcard.fill",
+                titleKey: "legacy_login_feature_wallet_title",
+                subtitleKey: "legacy_login_feature_wallet_subtitle"
+            )
 
-            featureRow(icon: "eye.slash.fill", title: "No Metadata Leaks",
-                       subtitle: "Sealed sender and minimal server state")
+            featureRow(
+                icon: "eye.slash.fill",
+                titleKey: "legacy_login_feature_metadata_title",
+                subtitleKey: "legacy_login_feature_metadata_subtitle"
+            )
 
             Button {
                 viewModel.startRegistration()
             } label: {
-                Text("Get Started")
+                Text(L10n.key("legacy_login_get_started"))
                     .font(OkaiwaTheme.Typography.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, OkaiwaTheme.Spacing.sm)
@@ -119,16 +128,18 @@ struct LoginView: View {
         @Bindable var vm = viewModel
 
         return VStack(spacing: OkaiwaTheme.Spacing.lg) {
-            Text("Enter your phone number")
+            Text(L10n.key("legacy_login_phone_title"))
                 .font(OkaiwaTheme.Typography.title)
 
-            Text("We'll send you a verification code via SMS. Your phone number is hashed before leaving your device.")
+            Text(L10n.key("legacy_login_phone_subtitle"))
                 .font(OkaiwaTheme.Typography.callout)
                 .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
 
             HStack(spacing: OkaiwaTheme.Spacing.xs) {
-                // Country code
+                // Country code — the "+33" is a neutral example and
+                // not a translatable label, keep as a verbatim
+                // LocalizedStringKey that bypasses the resource table.
                 TextField("+33", text: $vm.countryCode)
                     .keyboardType(.phonePad)
                     .textContentType(.telephoneNumber)
@@ -138,7 +149,7 @@ struct LoginView: View {
                     .clipShape(RoundedRectangle(cornerRadius: OkaiwaTheme.CornerRadius.small))
 
                 // Phone number
-                TextField("Phone number", text: $vm.phoneNumber)
+                TextField(L10n.key("legacy_login_phone_placeholder"), text: $vm.phoneNumber)
                     .keyboardType(.phonePad)
                     .textContentType(.telephoneNumber)
                     .padding(OkaiwaTheme.Spacing.sm)
@@ -163,7 +174,7 @@ struct LoginView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, OkaiwaTheme.Spacing.xs)
                 } else {
-                    Text("Send Code")
+                    Text(L10n.key("legacy_login_send_code"))
                         .font(OkaiwaTheme.Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, OkaiwaTheme.Spacing.xs)
@@ -181,10 +192,13 @@ struct LoginView: View {
         @Bindable var vm = viewModel
 
         return VStack(spacing: OkaiwaTheme.Spacing.lg) {
-            Text("Verify your number")
+            Text(L10n.key("legacy_login_verify_title"))
                 .font(OkaiwaTheme.Typography.title)
 
-            Text("Enter the 6-digit code sent to \(viewModel.countryCode)\(viewModel.phoneNumber)")
+            // Two `%@` placeholders — dial-code then national number —
+            // so the translated copy can glue them with different
+            // punctuation or a space if the locale demands it.
+            Text(L10n.string("legacy_login_verify_subtitle_format", viewModel.countryCode, viewModel.phoneNumber))
                 .font(OkaiwaTheme.Typography.callout)
                 .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -215,7 +229,7 @@ struct LoginView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, OkaiwaTheme.Spacing.xs)
                 } else {
-                    Text("Verify")
+                    Text(L10n.key("legacy_login_verify_cta"))
                         .font(OkaiwaTheme.Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, OkaiwaTheme.Spacing.xs)
@@ -225,7 +239,7 @@ struct LoginView: View {
             .tint(OkaiwaTheme.Colors.primaryFallback)
             .disabled(viewModel.isLoading || viewModel.verificationCode.count != 6)
 
-            Button("Resend Code") {
+            Button(L10n.string("legacy_login_resend_cta")) {
                 Task {
                     await viewModel.requestVerificationCode()
                 }
@@ -241,14 +255,14 @@ struct LoginView: View {
         @Bindable var vm = viewModel
 
         return VStack(spacing: OkaiwaTheme.Spacing.lg) {
-            Text("Choose a username")
+            Text(L10n.key("legacy_login_username_title"))
                 .font(OkaiwaTheme.Typography.title)
 
-            Text("This is how others will find you on Okaiwa.")
+            Text(L10n.key("legacy_login_username_subtitle"))
                 .font(OkaiwaTheme.Typography.callout)
                 .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
 
-            TextField("username", text: $vm.username)
+            TextField(L10n.key("legacy_login_username_placeholder"), text: $vm.username)
                 .textContentType(.username)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
@@ -273,7 +287,7 @@ struct LoginView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, OkaiwaTheme.Spacing.xs)
                 } else {
-                    Text("Continue")
+                    Text(L10n.key("legacy_login_username_cta"))
                         .font(OkaiwaTheme.Typography.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, OkaiwaTheme.Spacing.xs)
@@ -289,14 +303,18 @@ struct LoginView: View {
 
     private var footerSection: some View {
         VStack(spacing: OkaiwaTheme.Spacing.xxs) {
-            Text("By continuing, you agree to our")
+            Text(L10n.key("legacy_login_footer_disclaimer"))
                 .font(OkaiwaTheme.Typography.caption)
                 .foregroundStyle(OkaiwaTheme.Colors.textTertiary)
 
             HStack(spacing: OkaiwaTheme.Spacing.xxs) {
-                Link("Terms of Service", destination: URL(string: "https://okaiwa.io/terms")!)
-                Text("and")
-                Link("Privacy Policy", destination: URL(string: "https://okaiwa.io/privacy")!)
+                Link(destination: URL(string: "https://okaiwa.io/terms")!) {
+                    Text(L10n.key("legacy_login_footer_terms"))
+                }
+                Text(L10n.key("legacy_login_footer_and"))
+                Link(destination: URL(string: "https://okaiwa.io/privacy")!) {
+                    Text(L10n.key("legacy_login_footer_privacy"))
+                }
             }
             .font(OkaiwaTheme.Typography.caption)
             .foregroundStyle(OkaiwaTheme.Colors.primaryFallback)
@@ -306,7 +324,7 @@ struct LoginView: View {
 
     // MARK: - Helpers
 
-    private func featureRow(icon: String, title: String, subtitle: String) -> some View {
+    private func featureRow(icon: String, titleKey: String, subtitleKey: String) -> some View {
         HStack(spacing: OkaiwaTheme.Spacing.md) {
             Image(systemName: icon)
                 .font(.title2)
@@ -314,9 +332,9 @@ struct LoginView: View {
                 .frame(width: 40)
 
             VStack(alignment: .leading, spacing: OkaiwaTheme.Spacing.xxs) {
-                Text(title)
+                Text(L10n.key(titleKey))
                     .font(OkaiwaTheme.Typography.headline)
-                Text(subtitle)
+                Text(L10n.key(subtitleKey))
                     .font(OkaiwaTheme.Typography.caption)
                     .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
             }

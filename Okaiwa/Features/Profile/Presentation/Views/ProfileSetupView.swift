@@ -44,11 +44,11 @@ struct ProfileSetupView: View {
 
                     Spacer().frame(height: 20)
 
-                    Text("Choisissez votre nom d'utilisateur")
+                    Text(L10n.key("profile_setup_title"))
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(OkaiwaColors.white)
                     Spacer().frame(height: 8)
-                    Text("Vos contacts pourront vous trouver avec ce nom. Vous pourrez le changer plus tard depuis votre profil.")
+                    Text(L10n.key("profile_setup_subtitle"))
                         .font(.system(size: 14))
                         .foregroundStyle(OkaiwaColors.whiteDim)
                         .lineSpacing(4)
@@ -57,9 +57,9 @@ struct ProfileSetupView: View {
 
                     UsernameField(value: $model.username, isValid: model.isUsernameValid || model.username.isEmpty)
                     Spacer().frame(height: 12)
-                    PlainField(value: $model.displayName, placeholder: "Nom affiché (optionnel)", maxLength: 64)
+                    PlainField(value: $model.displayName, placeholderKey: "profile_setup_display_name_placeholder", maxLength: 64)
                     Spacer().frame(height: 12)
-                    PlainField(value: $model.bio, placeholder: "Bio (optionnel)", maxLength: 300, multiline: true)
+                    PlainField(value: $model.bio, placeholderKey: "profile_setup_bio_placeholder", maxLength: 300, multiline: true)
 
                     if let error = model.error {
                         Spacer().frame(height: 16)
@@ -78,7 +78,7 @@ struct ProfileSetupView: View {
                                 ProgressView()
                                     .tint(OkaiwaColors.black)
                             } else {
-                                Text("Enregistrer mon profil")
+                                Text(L10n.key("profile_setup_submit_cta"))
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundStyle(OkaiwaColors.black)
                             }
@@ -96,7 +96,7 @@ struct ProfileSetupView: View {
                     Button {
                         model.skip()
                     } label: {
-                        Text("Passer pour l'instant")
+                        Text(L10n.key("profile_setup_skip_cta"))
                             .font(.system(size: 14))
                             .foregroundStyle(OkaiwaColors.whiteDim)
                             .frame(maxWidth: .infinity)
@@ -134,7 +134,7 @@ private struct UsernameField: View {
                            || $0.value == 0x5F }                            // _
                     .reduce(into: "") { $0.unicodeScalars.append($1) }
             }
-        ), prompt: Text("@nomutilisateur").foregroundStyle(OkaiwaColors.placeholder))
+        ), prompt: Text(L10n.key("profile_setup_username_placeholder")).foregroundStyle(OkaiwaColors.placeholder))
             .foregroundStyle(OkaiwaColors.white)
             .tint(OkaiwaColors.lime)
             .padding(14)
@@ -151,7 +151,7 @@ private struct UsernameField: View {
 
 private struct PlainField: View {
     @Binding var value: String
-    let placeholder: String
+    let placeholderKey: String
     let maxLength: Int
     var multiline: Bool = false
 
@@ -162,7 +162,7 @@ private struct PlainField: View {
                 get: { value },
                 set: { value = String($0.prefix(maxLength)) }
             ),
-            prompt: Text(placeholder).foregroundStyle(OkaiwaColors.placeholder),
+            prompt: Text(L10n.key(placeholderKey)).foregroundStyle(OkaiwaColors.placeholder),
             axis: multiline ? .vertical : .horizontal
         )
             .lineLimit(multiline ? 1...4 : 1)
@@ -206,7 +206,7 @@ final class ProfileSetupModel {
         guard isSubmitEnabled else { return }
         guard let session = sessionStore.current,
               !session.accessToken.isEmpty else {
-            error = "Session expirée — reconnectez-vous."
+            error = L10n.string("profile_setup_error_session_expired")
             return
         }
         isSubmitting = true
@@ -232,13 +232,13 @@ final class ProfileSetupModel {
             await RemoteProfileRepository.shared.refresh()
             done = true
         } catch ProfileClientError.usernameTaken {
-            error = "Ce nom d'utilisateur est déjà pris."
+            error = L10n.string("profile_setup_error_username_taken")
         } catch AppError.sessionExpired {
-            error = "Session expirée — reconnectez-vous."
+            error = L10n.string("profile_setup_error_session_expired")
         } catch {
             // Generic copy on any transport / 5xx failure — never
             // surface raw server body or exception message to the UI.
-            error = "Connexion impossible. Vérifiez votre réseau."
+            error = L10n.string("profile_setup_error_network")
         }
     }
 

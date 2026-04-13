@@ -46,9 +46,14 @@ public struct ContactPickerView: View {
         .background(OkaiwaColors.black)
         .onAppear { viewModel.requestAccess() }
         .sheet(item: $inviteTarget) { contact in
+            // Invite copy is routed through the `contact_picker_invite_*`
+            // keys so the share sheet respects the user's locale. The
+            // subject uses `%@` expansion for the contact name to keep
+            // the translations free to rearrange "Invite John" vs.
+            // "Inviter Jean" around the placeholder.
             ShareSheet(
-                text: "Rejoins-moi sur Okaiwa — messagerie chiffrée + wallet crypto. https://okaiwa.io/install",
-                subject: "Inviter \(contact.displayName)"
+                text: L10n.string("contact_picker_invite_share_text"),
+                subject: L10n.string("contact_picker_invite_share_subject_format", contact.displayName)
             )
         }
     }
@@ -61,7 +66,7 @@ public struct ContactPickerView: View {
                     .foregroundStyle(OkaiwaColors.white)
                     .padding(12)
             }
-            Text("Nouvelle conversation")
+            Text(L10n.key("contact_picker_title"))
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(OkaiwaColors.white)
             Spacer()
@@ -73,7 +78,7 @@ public struct ContactPickerView: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(OkaiwaColors.muted)
-            TextField("", text: $viewModel.query, prompt: Text("Rechercher un contact").foregroundStyle(OkaiwaColors.placeholder))
+            TextField("", text: $viewModel.query, prompt: Text(L10n.key("contact_picker_search_placeholder")).foregroundStyle(OkaiwaColors.placeholder))
                 .foregroundStyle(OkaiwaColors.white)
                 .tint(OkaiwaColors.lime)
         }
@@ -93,13 +98,13 @@ public struct ContactPickerView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
                 if !viewModel.okaiwaContacts.isEmpty {
-                    sectionHeader("Sur Okaiwa", count: viewModel.okaiwaContacts.count)
+                    sectionHeader(key: "contact_picker_section_okaiwa", count: viewModel.okaiwaContacts.count)
                     ForEach(viewModel.okaiwaContacts) { contact in
                         okaiwaRow(contact)
                     }
                 }
                 if !viewModel.inviteContacts.isEmpty {
-                    sectionHeader("Inviter", count: viewModel.inviteContacts.count)
+                    sectionHeader(key: "contact_picker_section_invite", count: viewModel.inviteContacts.count)
                     ForEach(viewModel.inviteContacts) { contact in
                         inviteRow(contact)
                     }
@@ -108,11 +113,15 @@ public struct ContactPickerView: View {
         }
     }
 
-    private func sectionHeader(_ title: String, count: Int) -> some View {
+    private func sectionHeader(key: String, count: Int) -> some View {
         HStack(spacing: 6) {
-            Text(title.uppercased())
+            Text(L10n.key(key))
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(OkaiwaColors.muted)
+                .textCase(.uppercase)
+            // Middle dot + integer — uses `Text()` with a raw string
+            // because no translation is required for a punctuation +
+            // number combo.
             Text("· \(count)")
                 .font(.system(size: 11))
                 .foregroundStyle(OkaiwaColors.muted)
@@ -136,7 +145,7 @@ public struct ContactPickerView: View {
                         .foregroundStyle(OkaiwaColors.muted)
                 }
                 Spacer()
-                Text("Message")
+                Text(L10n.key("contact_picker_row_message"))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(OkaiwaColors.lime)
             }
@@ -161,7 +170,7 @@ public struct ContactPickerView: View {
                         .foregroundStyle(OkaiwaColors.muted)
                 }
                 Spacer()
-                Text("Inviter")
+                Text(L10n.key("contact_picker_row_invite"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(OkaiwaColors.lime)
                     .padding(.horizontal, 12)
@@ -199,10 +208,10 @@ public struct ContactPickerView: View {
                         .font(.system(size: 30))
                         .foregroundStyle(OkaiwaColors.lime)
                 )
-            Text("Accès aux contacts refusé")
+            Text(L10n.key("contact_picker_permission_title"))
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(OkaiwaColors.white)
-            Text("Okaiwa a besoin de lire vos contacts pour trouver qui est déjà sur la plateforme. Nous hashons les numéros localement — ils ne sont jamais envoyés en clair.")
+            Text(L10n.key("contact_picker_permission_body"))
                 .font(.system(size: 13))
                 .foregroundStyle(OkaiwaColors.whiteDim)
                 .multilineTextAlignment(.center)
@@ -216,7 +225,7 @@ public struct ContactPickerView: View {
                     UIApplication.shared.open(url)
                 }
             } label: {
-                Text("Autoriser l'accès aux contacts")
+                Text(L10n.key("contact_picker_permission_cta"))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(OkaiwaColors.black)
                     .padding(.horizontal, 20)

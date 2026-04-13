@@ -81,64 +81,72 @@ enum AppError: Error, LocalizedError, Equatable, Sendable {
 
     // MARK: - LocalizedError
 
+    /// Look up a format string from the Core module bundle. All error
+    /// copy lives in `OkaiwaCore/Resources/*.lproj/Localizable.strings`
+    /// — this helper keeps the `NSLocalizedString` / `bundle: .module`
+    /// boilerplate out of every case branch.
+    private static func loc(_ key: String) -> String {
+        NSLocalizedString(key, tableName: nil, bundle: .module, value: key, comment: "")
+    }
+
     var errorDescription: String? {
         switch self {
         case .server(let statusCode, let message):
-            return "Server error (\(statusCode)): \(message)"
+            return String(format: Self.loc("error_server_format"), statusCode, message)
 
         case .timeout:
-            return "The request timed out. Please check your connection and try again."
+            return Self.loc("error_timeout")
 
         case .noConnection:
-            return "No internet connection. Please check your network settings."
+            return Self.loc("error_no_connection")
 
         case .invalidResponse(let detail):
-            return "Unexpected server response: \(detail)"
+            return String(format: Self.loc("error_invalid_response_format"), detail)
 
         case .encryptionFailed(let reason):
-            return "Encryption error: \(reason)"
+            return String(format: Self.loc("error_encryption_failed_format"), reason)
 
         case .keyError(let reason):
-            return "Key management error: \(reason)"
+            return String(format: Self.loc("error_key_format"), reason)
 
         case .safetyNumberMismatch:
-            return "The safety number for this contact has changed. Please verify their identity."
+            return Self.loc("error_safety_number_mismatch")
 
         case .preKeyExhausted:
-            return "Unable to establish a secure session. The contact's pre-keys are exhausted."
+            return Self.loc("error_prekey_exhausted")
 
         case .sessionExpired:
-            return "Your session has expired. Please sign in again."
+            return Self.loc("error_session_expired")
 
         case .invalidVerificationCode:
-            return "The verification code is incorrect. Please try again."
+            return Self.loc("error_invalid_verification_code")
 
         case .rateLimited(let retryAfter):
-            return "Too many requests. Please wait \(retryAfter) seconds and try again."
+            return String(format: Self.loc("error_rate_limited_format"), retryAfter)
 
         case .registrationDenied(let reason):
-            return "Registration denied: \(reason)"
+            return String(format: Self.loc("error_registration_denied_format"), reason)
 
         case .transactionSigningFailed(let reason):
-            return "Transaction signing failed: \(reason)"
+            return String(format: Self.loc("error_tx_signing_failed_format"), reason)
 
         case .insufficientBalance(let required, let available):
-            return "Insufficient balance. Required: \(required), Available: \(available)"
+            return String(format: Self.loc("error_insufficient_balance_format"), required, available)
 
         case .invalidAddress(let address):
-            return "Invalid address: \(address)"
+            return String(format: Self.loc("error_invalid_address_format"), address)
 
         case .rpcError(let chain, let message):
-            return "\(chain) network error: \(message)"
+            return String(format: Self.loc("error_rpc_format"), chain, message)
 
         case .cacheFailed(let reason):
-            return "Local storage error: \(reason)"
+            return String(format: Self.loc("error_cache_failed_format"), reason)
 
         case .migrationFailed(let from, let to):
-            return "Data migration failed (v\(from) -> v\(to)). Please reinstall the app."
+            return String(format: Self.loc("error_migration_failed_format"), from, to)
 
         case .unknown(let underlying):
-            return "An unexpected error occurred: \(underlying)"
+            return String(format: Self.loc("error_unknown_format"), underlying)
         }
     }
 
@@ -149,15 +157,15 @@ enum AppError: Error, LocalizedError, Equatable, Sendable {
     var recoverySuggestion: String? {
         switch self {
         case .noConnection:
-            return "Check that Wi-Fi or cellular data is enabled."
+            return Self.loc("error_recovery_no_connection")
         case .sessionExpired:
-            return "Re-enter your phone number to sign in."
+            return Self.loc("error_recovery_session_expired")
         case .rateLimited(let seconds):
-            return "Wait \(seconds) seconds before trying again."
+            return String(format: Self.loc("error_recovery_rate_limited_format"), seconds)
         case .safetyNumberMismatch:
-            return "Compare safety numbers in person before continuing."
+            return Self.loc("error_recovery_safety_number")
         case .insufficientBalance:
-            return "Add funds to your wallet or reduce the transaction amount."
+            return Self.loc("error_recovery_insufficient_balance")
         default:
             return nil
         }

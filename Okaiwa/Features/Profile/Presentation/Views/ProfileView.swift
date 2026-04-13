@@ -25,6 +25,7 @@ public struct ProfileView: View {
     // why the bind moved.
     @ObservedObject private var repo = RemoteProfileRepository.shared
     @State private var selectedTab: PublicationTab = .active
+    @State private var showLanguagePicker: Bool = false
 
     public init() {}
 
@@ -41,6 +42,8 @@ public struct ProfileView: View {
                         quickActions
                         Spacer().frame(height: 20)
                         identityCard(profile: profile)
+                        Spacer().frame(height: 16)
+                        languageRow
                         Spacer().frame(height: 20)
                         publicationTabs
                         Spacer().frame(height: 40)
@@ -55,6 +58,41 @@ public struct ProfileView: View {
         .task { repo.start() }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OkaiwaColors.black)
+        .sheet(isPresented: $showLanguagePicker) {
+            LanguagePickerView()
+                .presentationBackground(OkaiwaColors.black)
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    /// Language row — identity-card companion that opens the
+    /// `LanguagePickerView`. Same visual weight as the identity card
+    /// rows so the block reads as a continuation of the user's
+    /// preferences rather than a system setting.
+    private var languageRow: some View {
+        Button {
+            showLanguagePicker = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "globe")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(OkaiwaColors.lime)
+                    .frame(width: 24)
+                Text(L10n.key("profile_language_row"))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(OkaiwaColors.white)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(OkaiwaColors.muted)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(OkaiwaColors.blackElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(.horizontal, 16)
+        }
+        .buttonStyle(.plain)
     }
 
     private var topBar: some View {
@@ -65,13 +103,24 @@ public struct ProfileView: View {
                     .foregroundStyle(OkaiwaColors.white)
                     .padding(12)
             }
+            .accessibilityLabel(L10n.string("profile_top_bar_qr_cd"))
+
             Spacer()
-            Button(action: { /* TODO: action sheet */ }) {
+
+            // Native SwiftUI Menu = the iOS analog of M3 DropdownMenu.
+            // Anchored to the kebab IconButton; iOS handles placement +
+            // tap-outside dismissal automatically.
+            Menu {
+                Button(role: .destructive, action: { repo.signOut() }) {
+                    Label(L10n.string("profile_more_menu_logout"), systemImage: "rectangle.portrait.and.arrow.right")
+                }
+            } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(OkaiwaColors.white)
                     .padding(12)
             }
+            .accessibilityLabel(L10n.string("profile_top_bar_more_cd"))
         }
     }
 
@@ -105,7 +154,7 @@ public struct ProfileView: View {
 
             Spacer().frame(height: 2)
 
-            Text(profile.isOnline ? "en ligne" : "hors ligne")
+            Text(L10n.key(profile.isOnline ? "profile_presence_online" : "profile_presence_offline"))
                 .font(.system(size: 13))
                 .foregroundStyle(profile.isOnline ? OkaiwaColors.lime : OkaiwaColors.muted)
         }
@@ -113,21 +162,21 @@ public struct ProfileView: View {
 
     private var quickActions: some View {
         HStack(spacing: 10) {
-            QuickActionTile(systemIcon: "camera.fill", label: "Photo", action: onPickAvatar)
-            QuickActionTile(systemIcon: "pencil", label: "Modifier", action: onEditProfile)
-            QuickActionTile(systemIcon: "gearshape.fill", label: "Paramètres", action: onOpenSettings)
+            QuickActionTile(systemIcon: "camera.fill", labelKey: "profile_action_photo", action: onPickAvatar)
+            QuickActionTile(systemIcon: "pencil", labelKey: "profile_action_edit", action: onEditProfile)
+            QuickActionTile(systemIcon: "gearshape.fill", labelKey: "profile_action_settings", action: onOpenSettings)
         }
         .padding(.horizontal, 16)
     }
 
     private func identityCard(profile: UserProfile) -> some View {
         VStack(spacing: 0) {
-            InfoRow(label: "Mobile", value: profile.phoneNumberE164)
+            InfoRow(labelKey: "profile_info_mobile", value: profile.phoneNumberE164)
             divider
-            InfoRow(label: "Nom d'utilisateur", value: profile.username)
+            InfoRow(labelKey: "profile_info_username", value: profile.username)
             if let bio = profile.bio, !bio.isEmpty {
                 divider
-                InfoRow(label: "Bio", value: bio)
+                InfoRow(labelKey: "profile_info_bio", value: bio)
             }
         }
         .background(OkaiwaColors.blackElevated)
@@ -144,12 +193,12 @@ public struct ProfileView: View {
     private var publicationTabs: some View {
         HStack(spacing: 8) {
             TabPill(
-                text: "Publications",
+                textKey: "profile_tab_publications",
                 isSelected: selectedTab == .active,
                 action: { selectedTab = .active }
             )
             TabPill(
-                text: "Publications archivées",
+                textKey: "profile_tab_publications_archived",
                 isSelected: selectedTab == .archived,
                 action: { selectedTab = .archived }
             )
@@ -160,10 +209,10 @@ public struct ProfileView: View {
 
     private var emptyPublications: some View {
         VStack(spacing: 6) {
-            Text("Aucune publication...")
+            Text(L10n.key("profile_empty_title"))
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(OkaiwaColors.white)
-            Text("Publiez des photos et vidéos à afficher sur votre page de profil.")
+            Text(L10n.key("profile_empty_subtitle"))
                 .font(.system(size: 12))
                 .foregroundStyle(OkaiwaColors.muted)
                 .multilineTextAlignment(.center)
@@ -175,7 +224,7 @@ public struct ProfileView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "photo.on.rectangle")
                         .font(.system(size: 16))
-                    Text("Ajouter une publication")
+                    Text(L10n.key("profile_empty_cta"))
                         .font(.system(size: 14, weight: .semibold))
                 }
                 .foregroundStyle(OkaiwaColors.black)
@@ -193,7 +242,7 @@ public struct ProfileView: View {
 
     private struct QuickActionTile: View {
         let systemIcon: String
-        let label: String
+        let labelKey: String
         let action: () -> Void
 
         var body: some View {
@@ -202,7 +251,7 @@ public struct ProfileView: View {
                     Image(systemName: systemIcon)
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(OkaiwaColors.lime)
-                    Text(label)
+                    Text(L10n.key(labelKey))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(OkaiwaColors.white)
                 }
@@ -216,14 +265,14 @@ public struct ProfileView: View {
     }
 
     private struct InfoRow: View {
-        let label: String
+        let labelKey: String
         let value: String
         var body: some View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(OkaiwaColors.white)
-                Text(label)
+                Text(L10n.key(labelKey))
                     .font(.system(size: 12))
                     .foregroundStyle(OkaiwaColors.muted)
             }
@@ -234,12 +283,12 @@ public struct ProfileView: View {
     }
 
     private struct TabPill: View {
-        let text: String
+        let textKey: String
         let isSelected: Bool
         let action: () -> Void
         var body: some View {
             Button(action: action) {
-                Text(text)
+                Text(L10n.key(textKey))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(isSelected ? OkaiwaColors.lime : OkaiwaColors.muted)
                     .padding(.horizontal, 14)

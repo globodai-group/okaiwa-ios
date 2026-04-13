@@ -37,14 +37,19 @@ public struct OnboardingFlow: View {
     @State private var pendingPhoneE164: String = ""
     @State private var otpError: String?
 
-    @State private var sessionStore = SessionStore()
+    // Shared singleton — must be the SAME instance every other
+    // consumer (RemoteProfileRepository, IdentityAuthService) reaches
+    // for, otherwise a `clear()` on one instance leaves stale tokens
+    // in others' @Observable snapshots and the logout watchdog below
+    // never fires.
+    @State private var sessionStore = SessionStore.shared
     private let authService: IdentityAuthService
 
     let onComplete: () -> Void
 
     public init(onComplete: @escaping () -> Void) {
         self.onComplete = onComplete
-        let sessionStore = SessionStore()
+        let sessionStore = SessionStore.shared
         self._sessionStore = State(initialValue: sessionStore)
         self.authService = IdentityAuthService(sessionStore: sessionStore)
     }
@@ -137,6 +142,18 @@ public struct OnboardingFlow: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: step)
+        // Logout watchdog — when the SessionStore goes nil while we
+        // are in .complete (i.e. the user tapped Déconnexion from
+        // ProfileView, which calls RemoteProfileRepository.signOut →
+        // sessionStore.clear()), flip back to .welcome instead of
+        // letting MainScaffold re-render against a wiped session.
+        // Mirrors `popUpTo(0) { inclusive = true }` on Android's
+        // navController.
+        .onChange(of: sessionStore.current) { _, newValue in
+            if newValue == nil && step != .welcome && step != .splash {
+                step = .welcome
+            }
+        }
         .sheet(isPresented: $showCountryPicker) {
             CountryPickerView(
                 onBack: { showCountryPicker = false },
@@ -172,7 +189,7 @@ public struct OnboardingFlow: View {
             accountNotFoundForLogin = true
         } catch let error as AppError {
             isSubmitting = false
-            phoneError = error.errorDescription ?? "Échec de la requête"
+            phoneError = error.errorDescription ?? L10n.string("phone_entry_generic_error")
         } catch {
             isSubmitting = false
             phoneError = error.localizedDescription
@@ -195,7 +212,7 @@ public struct OnboardingFlow: View {
             step = .profileSetup
         } catch let error as AppError {
             isSubmitting = false
-            otpError = error.errorDescription ?? "Code incorrect"
+            otpError = error.errorDescription ?? L10n.string("otp_generic_error")
         } catch {
             isSubmitting = false
             otpError = error.localizedDescription

@@ -12,34 +12,34 @@ import SwiftUI
 
 struct ChatsTabPlaceholder: View {
     var body: some View {
-        TabPlaceholder(title: "Échanges", subtitle: "Liste des conversations")
+        TabPlaceholder(titleKey: "tab_chats", subtitleKey: "tab_chats_placeholder_subtitle")
     }
 }
 
 struct WalletTabPlaceholder: View {
     var body: some View {
-        TabPlaceholder(title: "Wallet", subtitle: "Balances multi-chaînes")
+        TabPlaceholder(titleKey: "tab_wallet", subtitleKey: "tab_wallet_placeholder_subtitle")
     }
 }
 
 struct SettingsTabPlaceholder: View {
     var body: some View {
-        TabPlaceholder(title: "Paramètres", subtitle: "Sécurité, sauvegarde, confidentialité")
+        TabPlaceholder(titleKey: "tab_settings", subtitleKey: "tab_settings_placeholder_subtitle")
     }
 }
 
 private struct TabPlaceholder: View {
-    let title: String
-    let subtitle: String
+    let titleKey: String
+    let subtitleKey: String
 
     var body: some View {
         ZStack {
             OkaiwaColors.black.ignoresSafeArea()
             VStack(spacing: 8) {
-                Text(title)
+                Text(L10n.key(titleKey))
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(OkaiwaColors.lime)
-                Text(subtitle)
+                Text(L10n.key(subtitleKey))
                     .font(.system(size: 14))
                     .foregroundStyle(OkaiwaColors.muted)
             }

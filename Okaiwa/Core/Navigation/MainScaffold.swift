@@ -13,12 +13,18 @@ public enum MainTab: Int, CaseIterable, Identifiable {
 
     public var id: Int { rawValue }
 
-    var label: String {
+    /// Localized label key for this tab. Returning a resource key (not
+    /// a resolved string) lets the SwiftUI `Text(LocalizedStringKey)`
+    /// overload pick up the tab title from the consumer's bundle —
+    /// `MainTab` lives in OkaiwaCore but the label strings live in
+    /// OkaiwaFeatures' resource table, so exposing the key and letting
+    /// the consumer do the lookup avoids a cross-module bundle hop.
+    var labelKey: String {
         switch self {
-        case .chats: return "Échanges"
-        case .wallet: return "Wallet"
-        case .settings: return "Paramètres"
-        case .profile: return "Profil"
+        case .chats: return "tab_chats"
+        case .wallet: return "tab_wallet"
+        case .settings: return "tab_settings"
+        case .profile: return "tab_profile"
         }
     }
 
@@ -134,7 +140,11 @@ private struct TabItem: View {
             VStack(spacing: 4) {
                 Image(systemName: isSelected ? tab.systemIcon : tab.systemIconUnselected)
                     .font(.system(size: 20, weight: isSelected ? .semibold : .regular))
-                Text(tab.label)
+                // `LocalizedStringKey` resolves against the module
+                // that created the Text — MainScaffold lives in Core,
+                // so the `tab_*` keys are declared in Core's own
+                // `Localizable.strings` tables.
+                Text(LocalizedStringKey(tab.labelKey), bundle: .module)
                     .font(.system(size: 11, weight: isSelected ? .semibold : .medium))
             }
             .foregroundStyle(isSelected ? OkaiwaColors.lime : OkaiwaColors.muted)

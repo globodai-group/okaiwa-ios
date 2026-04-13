@@ -34,10 +34,26 @@ public final class RemoteProfileRepository: ObservableObject {
 
     public init(
         client: IdentityProfileClient = IdentityProfileClient(),
-        sessionStore: SessionStore = SessionStore()
+        sessionStore: SessionStore = SessionStore.shared
     ) {
         self.client = client
         self.sessionStore = sessionStore
+    }
+
+    /// Sign out — wipe the cached profile FIRST so a fresh login on
+    /// the same device never briefly renders the previous user's data
+    /// (cross-account leak — P0 from the Android logout review),
+    /// THEN clear the SessionStore which the host (OnboardingFlow)
+    /// observes to flip back to .welcome.
+    ///
+    /// NOTE: this does NOT delete the libsignal identity keys or the
+    /// wallet seed — those stay so the user can re-login with the
+    /// same phone and recover the same wallet. Account deletion (which
+    /// DOES wipe everything) is a separate destructive action.
+    public func signOut() {
+        profile = nil
+        hasFetchedOnce = false
+        sessionStore.clear()
     }
 
     /// Trigger a one-shot fetch of `/v1/profile/me`. Idempotent within

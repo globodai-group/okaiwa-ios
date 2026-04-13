@@ -34,6 +34,15 @@ import os
 @Observable
 @MainActor
 final class SessionStore {
+
+    /// Singleton — both OnboardingFlow and RemoteProfileRepository
+    /// MUST resolve through this so a `clear()` from any caller is
+    /// observed by every other consumer through the @Observable
+    /// snapshot. Independent instances would each hold their own
+    /// `current` snapshot, decoupling sign-out from the navigation
+    /// watchdog (cross-account leak risk: ProfileView wipes its
+    /// SessionStore but OnboardingFlow keeps the old session shown).
+    static let shared = SessionStore()
     struct Session: Equatable, Sendable {
         let accountId: String
         let phoneHash: String

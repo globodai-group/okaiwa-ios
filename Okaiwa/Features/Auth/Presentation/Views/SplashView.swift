@@ -27,7 +27,7 @@ public struct SplashView: View {
                     .scaleEffect(logoScale)
                     .opacity(logoOpacity)
 
-                Text("OKAIWA")
+                Text(L10n.key("app_wordmark"))
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(OkaiwaColors.white)
                     .tracking(4)

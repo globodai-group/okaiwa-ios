@@ -1,0 +1,328 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+   Copyright 2026 Globodai FZCO
+
+   French localization — canonical copy. All new strings added here MUST
+   be mirrored in `en.lproj/Localizable.strings` and in the Android twin
+   at `okaiwa-android/app/src/main/res/values/strings.xml` (keys must
+   match exactly — the two apps stay visually identical across tabs,
+   onboarding, and settings).
+
+   Naming convention: `screen_section_purpose`. Do not invent a new
+   scheme; extend an existing prefix.
+*/
+
+// MARK: - Brand
+"app_name" = "Okaiwa";
+"app_wordmark" = "OKAIWA";
+
+// MARK: - Splash / Welcome
+"welcome_tagline" = "Messagerie chiffrée.\nWallet intégré.";
+"welcome_create_account_button" = "Créer un compte";
+"welcome_sign_in_button" = "Se connecter";
+"welcome_legal_disclaimer" = "En continuant, vous acceptez nos Conditions d'utilisation et notre Politique de confidentialité.";
+
+// MARK: - Phone entry
+"phone_entry_title_register" = "Votre numéro de téléphone";
+"phone_entry_title_login" = "Connexion";
+"phone_entry_subtitle" = "Confirmez votre indicatif national\net entrez votre numéro de téléphone.";
+"phone_entry_country_label" = "Pays";
+"phone_entry_number_label" = "Numéro de téléphone";
+"phone_entry_sync_contacts" = "Synchroniser les contacts";
+"phone_entry_not_found_title" = "Aucun compte Okaiwa avec ce numéro.";
+"phone_entry_not_found_body" = "Vous n'êtes pas encore inscrit. Vous pouvez créer un compte avec ce numéro en un seul geste.";
+"phone_entry_not_found_cta" = "Créer un compte avec ce numéro";
+"phone_entry_generic_error" = "Échec de la requête";
+
+// MARK: - OTP
+"otp_title" = "Code à 6 chiffres";
+"otp_subtitle_format" = "Nous venons d'envoyer un code par SMS au\n%@";
+"otp_resend_countdown_format" = "Renvoyer le code dans %d s";
+"otp_resend_cta" = "Renvoyer le code";
+"otp_dev_hint" = "DEV — utilisez 000000 pour passer";
+"otp_submit_cta" = "Continuer";
+"otp_generic_error" = "Code incorrect";
+
+// MARK: - Country picker
+"country_picker_title" = "Choisir un pays";
+"country_picker_search_placeholder" = "Rechercher un pays";
+
+// MARK: - Profile setup
+"profile_setup_title" = "Choisissez votre nom d'utilisateur";
+"profile_setup_subtitle" = "Vos contacts pourront vous trouver avec ce nom. Vous pourrez le changer plus tard depuis votre profil.";
+"profile_setup_username_placeholder" = "@nomutilisateur";
+"profile_setup_display_name_placeholder" = "Nom affiché (optionnel)";
+"profile_setup_bio_placeholder" = "Bio (optionnel)";
+"profile_setup_submit_cta" = "Enregistrer mon profil";
+"profile_setup_skip_cta" = "Passer pour l'instant";
+"profile_setup_error_username_taken" = "Ce nom d'utilisateur est déjà pris.";
+"profile_setup_error_session_expired" = "Session expirée — reconnectez-vous.";
+"profile_setup_error_network" = "Connexion impossible. Vérifiez votre réseau.";
+
+// MARK: - Profile view
+"profile_presence_online" = "en ligne";
+"profile_presence_offline" = "hors ligne";
+"profile_action_photo" = "Photo";
+"profile_action_edit" = "Modifier";
+"profile_action_settings" = "Paramètres";
+"profile_info_mobile" = "Mobile";
+"profile_info_username" = "Nom d'utilisateur";
+"profile_info_bio" = "Bio";
+"profile_tab_publications" = "Publications";
+"profile_tab_publications_archived" = "Publications archivées";
+"profile_empty_title" = "Aucune publication...";
+"profile_empty_subtitle" = "Publiez des photos et vidéos à afficher sur votre page de profil.";
+"profile_empty_cta" = "Ajouter une publication";
+"profile_language_row" = "Langue";
+
+// MARK: - Wallet onboarding (gateway)
+"wallet_title" = "Wallet";
+"wallet_onboarding_title" = "Votre wallet crypto";
+"wallet_onboarding_subtitle" = "Envoyez et recevez des cryptos directement dans vos conversations. Vos clés restent sur votre appareil.";
+"wallet_onboarding_create_cta" = "Créer un wallet";
+"wallet_onboarding_import_cta" = "Importer un wallet";
+
+// MARK: - Wallet onboarding flow — Step 1: Method
+"wallet_create_title" = "Créer un nouveau portefeuille";
+"wallet_method_seedphrase_title" = "Phrase secrète";
+"wallet_method_seedphrase_subtitle" = "Afficher les détails";
+"wallet_method_seedphrase_badge" = "Recommandé";
+"wallet_method_seedphrase_bullet_1" = "24 mots BIP-39 générés sur votre appareil. La seule façon de récupérer vos fonds.";
+"wallet_method_seedphrase_bullet_2" = "Sécurité : 256 bits d'entropie — la même norme que Ledger, Trezor, Signal.";
+"wallet_method_seedphrase_bullet_3" = "Peut être sauvegardée dans 1Password, Dashlane ou votre trousseau natif.";
+"wallet_method_passkey_title" = "Clé d'accès";
+"wallet_method_passkey_subtitle" = "Masquer les détails";
+"wallet_method_passkey_badge" = "Beta";
+"wallet_method_passkey_bullet_1" = "Créez ou récupérez un portefeuille avec une empreinte digitale ou Face ID.";
+"wallet_method_passkey_bullet_2" = "Transaction : huit chaînes disponibles sans étapes supplémentaires.";
+"wallet_method_passkey_bullet_3" = "Frais : moins de 200 tokens moyens pour les transactions courantes.";
+"wallet_method_cta" = "Créer";
+
+// MARK: - Wallet onboarding flow — Step 2: Security tips
+"wallet_security_tips_title" = "Conseils de sécurité";
+"wallet_security_tips_header" = "Votre phrase secrète est la clé de votre portefeuille";
+"wallet_security_tips_subtitle" = "Cochez toutes les cases pour confirmer que vous comprenez l'importance de la phrase secrète.";
+"wallet_security_tips_seed_1" = "La phrase secrète (24 mots) est la SEULE manière de récupérer mon portefeuille. Si je la perds, mes fonds sont perdus à jamais.";
+"wallet_security_tips_seed_2" = "Je dois la conserver hors ligne — papier, coffre-fort, ou gestionnaire de mots de passe — et ne JAMAIS la partager.";
+"wallet_security_tips_seed_3" = "Okaiwa n'a aucun moyen de récupérer ma phrase secrète à ma place. La sécurité dépend entièrement de moi.";
+"wallet_security_tips_passkey_1" = "La clé privée est générée dans la Secure Enclave de mon iPhone. Elle ne quitte jamais l'appareil en clair et ne sera accessible qu'avec mon empreinte ou Face ID.";
+"wallet_security_tips_passkey_2" = "La sauvegarde chiffrée est synchronisée via iCloud Keychain. Je peux donc récupérer mon wallet sur un nouveau téléphone en m'authentifiant avec mon Apple ID.";
+"wallet_security_tips_passkey_3" = "Si je supprime la clé d'accès ET que je perds l'accès à mon Apple ID, je perdrai mes fonds. Okaiwa n'a aucun backup de secours.";
+"wallet_security_tips_continue_cta" = "Continuer";
+
+// MARK: - Wallet onboarding flow — Step 3: Seed phrase display
+"wallet_seed_display_title" = "Votre phrase secrète";
+"wallet_seed_display_warning" = "Notez ces 24 mots dans l'ordre et gardez-les hors ligne. Personne — y compris Okaiwa — ne peut les récupérer à votre place.";
+"wallet_seed_display_save_cta" = "Enregistrer dans un gestionnaire";
+"wallet_seed_display_saved" = "Sauvegardée ✓";
+"wallet_seed_display_copy_cta" = "Copier dans le presse-papiers";
+"wallet_seed_display_continue_cta" = "J'ai sauvegardé ma phrase";
+
+// MARK: - Wallet onboarding flow — Step 4: Verify
+"wallet_seed_verify_title" = "Vérifier la phrase";
+"wallet_seed_verify_instruction" = "Sélectionnez les mots correspondants pour confirmer que vous avez sauvegardé votre phrase secrète.";
+"wallet_seed_verify_word_format" = "Mot #%d";
+"wallet_seed_verify_continue_cta" = "Continuer";
+
+// MARK: - Wallet onboarding flow — Step 4b: Passkey
+"wallet_passkey_title" = "Clé d'accès";
+"wallet_passkey_header" = "Créez votre clé d'accès";
+"wallet_passkey_subtitle" = "Votre iPhone va vous demander de confirmer avec Face ID ou Touch ID. La clé privée reste dans la Secure Enclave — Okaiwa ne la voit jamais.";
+"wallet_passkey_benefit_1_title" = "Génération matérielle";
+"wallet_passkey_benefit_1_subtitle" = "Clé signée par la Secure Enclave, non exportable.";
+"wallet_passkey_benefit_2_title" = "Sauvegarde cloud chiffrée";
+"wallet_passkey_benefit_2_subtitle" = "Sync iCloud Keychain pour la récupération multi-appareil.";
+"wallet_passkey_benefit_3_title" = "Pas de phrase à retenir";
+"wallet_passkey_benefit_3_subtitle" = "Biométrie suffit — aucun mot de passe ni mnémonique à noter.";
+"wallet_passkey_creating" = "Création…";
+"wallet_passkey_create_cta" = "Créer avec biométrie";
+
+// MARK: - Wallet onboarding flow — Step 5: Name wallet
+"wallet_name_title" = "Définir le nom du portefeuille";
+"wallet_name_field_label" = "Nom du portefeuille";
+"wallet_name_field_placeholder" = "Mon portefeuille principal";
+"wallet_name_field_hint" = "Entre 4 et 24 caractères.";
+"wallet_name_done_cta" = "Terminé";
+
+// MARK: - Wallet onboarding flow — Step 6: Ready
+"wallet_ready_skip_cta" = "Ignorer";
+"wallet_ready_title_format" = "Parfait !\n%@ est prêt.";
+"wallet_ready_subtitle" = "Ajoutez des fonds pour commencer à envoyer et recevoir.";
+"wallet_ready_fund_cta" = "Alimentez votre portefeuille";
+"wallet_ready_fund_hint" = "Dépôt depuis Binance, Coinbase, ou tout wallet externe.";
+"wallet_default_name" = "Mon portefeuille";
+
+// MARK: - Conversations list
+"conversations_empty_title" = "Aucune conversation";
+"conversations_empty_subtitle" = "Commencez une conversation chiffrée avec un contact.";
+
+// MARK: - New message
+"new_message_title" = "Nouveau message";
+"new_message_search_placeholder" = "Rechercher des contacts";
+"new_message_action_new_group" = "Nouveau groupe";
+"new_message_action_new_group_trailing" = "Jusqu'à 500 membres";
+"new_message_action_new_channel" = "Nouveau canal";
+"new_message_action_new_channel_badge" = "Pro";
+"new_message_action_invite_contact" = "Inviter un contact";
+"new_message_section_recent" = "Trier par heure de connexion";
+"new_message_discovery_searching" = "Recherche…";
+"new_message_discovery_not_found" = "Aucun utilisateur Okaiwa pour cet identifiant.";
+"new_message_discovery_start_cta" = "Démarrer";
+"new_message_last_seen_online" = "en ligne";
+"new_message_last_seen_minutes_format" = "en ligne il y a %d min";
+"new_message_last_seen_hours_format" = "en ligne il y a %d h";
+"new_message_last_seen_days_format" = "vu il y a %d j";
+"new_message_last_seen_recent" = "vu récemment";
+
+// MARK: - Contact picker
+"contact_picker_title" = "Nouvelle conversation";
+"contact_picker_search_placeholder" = "Rechercher un contact";
+"contact_picker_section_okaiwa" = "Sur Okaiwa";
+"contact_picker_section_invite" = "Inviter";
+"contact_picker_row_message" = "Message";
+"contact_picker_row_invite" = "Inviter";
+"contact_picker_permission_title" = "Accès aux contacts refusé";
+"contact_picker_permission_body" = "Okaiwa a besoin de lire vos contacts pour trouver qui est déjà sur la plateforme. Nous hashons les numéros localement — ils ne sont jamais envoyés en clair.";
+"contact_picker_permission_cta" = "Autoriser l'accès aux contacts";
+"contact_picker_invite_share_text" = "Rejoins-moi sur Okaiwa — messagerie chiffrée + wallet crypto. https://okaiwa.io/install";
+"contact_picker_invite_share_subject_format" = "Inviter %@";
+
+// MARK: - Main tabs
+"tab_chats" = "Échanges";
+"tab_wallet" = "Wallet";
+"tab_settings" = "Paramètres";
+"tab_profile" = "Profil";
+"tab_chats_placeholder_subtitle" = "Liste des conversations";
+"tab_wallet_placeholder_subtitle" = "Balances multi-chaînes";
+"tab_settings_placeholder_subtitle" = "Sécurité, sauvegarde, confidentialité";
+
+// MARK: - Legacy LoginView (pre-OnboardingFlow prototype — kept until removal)
+"legacy_login_tagline" = "Messagerie et portefeuille sécurisés";
+"legacy_login_feature_encrypted_title" = "Chiffrement de bout en bout";
+"legacy_login_feature_encrypted_subtitle" = "Messages protégés par le protocole Signal";
+"legacy_login_feature_wallet_title" = "Wallet intégré";
+"legacy_login_feature_wallet_subtitle" = "Envoyez et recevez des cryptos sans quitter la conversation";
+"legacy_login_feature_metadata_title" = "Pas de fuite de métadonnées";
+"legacy_login_feature_metadata_subtitle" = "Expéditeur scellé et état serveur minimal";
+"legacy_login_get_started" = "Commencer";
+"legacy_login_phone_title" = "Entrez votre numéro de téléphone";
+"legacy_login_phone_subtitle" = "Nous vous enverrons un code de vérification par SMS. Votre numéro est haché avant de quitter votre appareil.";
+"legacy_login_phone_placeholder" = "Numéro de téléphone";
+"legacy_login_send_code" = "Envoyer le code";
+"legacy_login_verify_title" = "Vérifiez votre numéro";
+"legacy_login_verify_subtitle_format" = "Entrez le code à 6 chiffres envoyé à %@%@";
+"legacy_login_verify_cta" = "Vérifier";
+"legacy_login_resend_cta" = "Renvoyer le code";
+"legacy_login_username_title" = "Choisissez un nom d'utilisateur";
+"legacy_login_username_subtitle" = "C'est ainsi que les autres vous trouveront sur Okaiwa.";
+"legacy_login_username_placeholder" = "nom_utilisateur";
+"legacy_login_username_cta" = "Continuer";
+"legacy_login_footer_disclaimer" = "En continuant, vous acceptez nos";
+"legacy_login_footer_terms" = "Conditions d'utilisation";
+"legacy_login_footer_and" = "et";
+"legacy_login_footer_privacy" = "Politique de confidentialité";
+
+// MARK: - Chat view
+"chat_nav_title" = "Discussion";
+"chat_menu_disappearing" = "Messages éphémères";
+"chat_menu_conversation_info" = "Infos sur la conversation";
+"chat_menu_verify_identity" = "Vérifier l'identité";
+"chat_input_placeholder" = "Message";
+"chat_action_copy" = "Copier";
+"chat_action_reply" = "Répondre";
+"chat_action_delete_for_everyone" = "Supprimer pour tout le monde";
+"chat_action_delete_for_me" = "Supprimer pour moi";
+"chat_reply_prefix" = "Réponse à";
+"chat_message_placeholder_body" = "Message chiffré";
+
+// MARK: - Wallet view
+"wallet_tab_nav_title" = "Wallet";
+"wallet_action_send" = "Envoyer";
+"wallet_action_receive" = "Recevoir";
+"wallet_transactions_header" = "Transactions récentes";
+"wallet_transactions_empty" = "Aucune transaction pour l'instant";
+"wallet_send_recipient_section" = "Destinataire";
+"wallet_send_recipient_placeholder" = "Adresse ou nom ENS";
+"wallet_send_amount_section" = "Montant";
+"wallet_send_amount_placeholder" = "0,00";
+"wallet_send_note_section" = "Note (optionnel)";
+"wallet_send_note_placeholder" = "À quel sujet ?";
+"wallet_send_fee_section" = "Frais estimés";
+"wallet_send_title_format" = "Envoyer %@";
+"wallet_send_cancel" = "Annuler";
+"wallet_send_confirm" = "Envoyer";
+"wallet_receive_title_format" = "Recevoir %@";
+"wallet_receive_copy_address" = "Copier l'adresse";
+"wallet_receive_done" = "Terminé";
+"wallet_tx_direction_sent" = "Envoyé";
+"wallet_tx_direction_received" = "Reçu";
+
+// MARK: - Settings
+"settings_nav_title" = "Paramètres";
+"settings_section_security_score" = "Score de sécurité";
+"settings_section_recommendations" = "Recommandations";
+"settings_section_privacy" = "Confidentialité et sécurité";
+"settings_row_privacy" = "Confidentialité";
+"settings_row_blocked" = "Bloqués";
+"settings_row_screen_security" = "Sécurité d'écran";
+"settings_row_disappearing" = "Messages éphémères";
+"settings_section_notifications" = "Notifications";
+"settings_row_notifications" = "Notifications";
+"settings_row_sounds" = "Sons";
+"settings_section_appearance" = "Apparence";
+"settings_row_appearance" = "Apparence";
+"settings_row_wallpaper" = "Fond d'écran";
+"settings_row_language" = "Langue";
+"settings_section_account" = "Compte";
+"settings_row_linked_devices" = "Appareils liés";
+"settings_row_export_keys" = "Exporter les clés d'identité";
+"settings_row_logout" = "Se déconnecter";
+"settings_row_delete_account" = "Supprimer le compte";
+"settings_delete_alert_title" = "Supprimer le compte";
+"settings_delete_alert_cancel" = "Annuler";
+"settings_delete_alert_confirm" = "Supprimer";
+"settings_delete_alert_body" = "Cette action supprimera définitivement votre compte, tous vos messages et vos données de wallet. Elle est irréversible.";
+"settings_section_about" = "À propos";
+"settings_row_version" = "Version";
+"settings_row_licenses" = "Licences";
+"settings_row_privacy_link" = "Politique de confidentialité";
+"settings_row_terms_link" = "Conditions d'utilisation";
+"settings_about_footer" = "Okaiwa est un logiciel open source distribué sous licence AGPLv3.\nCopyright 2026 Globodai FZCO.";
+
+// MARK: - Error recovery view
+"error_recovery_title" = "Une erreur est survenue";
+"error_recovery_retry" = "Réessayer";
+
+// MARK: - Language picker
+"language_picker_title" = "Langue";
+"language_picker_system" = "Langue du système";
+"language_picker_french" = "Français";
+"language_picker_english" = "Anglais";
+
+// MARK: - AppError descriptions
+"error_server_format" = "Erreur serveur (%d) : %@";
+"error_timeout" = "La requête a expiré. Vérifiez votre connexion et réessayez.";
+"error_no_connection" = "Aucune connexion internet. Vérifiez votre réseau.";
+"error_invalid_response_format" = "Réponse serveur inattendue : %@";
+"error_encryption_failed_format" = "Erreur de chiffrement : %@";
+"error_key_format" = "Erreur de gestion des clés : %@";
+"error_safety_number_mismatch" = "Le numéro de sécurité de ce contact a changé. Vérifiez son identité.";
+"error_prekey_exhausted" = "Impossible d'établir une session sécurisée. Les pré-clés du contact sont épuisées.";
+"error_session_expired" = "Votre session a expiré. Reconnectez-vous.";
+"error_invalid_verification_code" = "Le code de vérification est incorrect. Réessayez.";
+"error_rate_limited_format" = "Trop de requêtes. Patientez %d secondes avant de réessayer.";
+"error_registration_denied_format" = "Inscription refusée : %@";
+"error_tx_signing_failed_format" = "Échec de la signature de la transaction : %@";
+"error_insufficient_balance_format" = "Solde insuffisant. Requis : %@, disponible : %@";
+"error_invalid_address_format" = "Adresse invalide : %@";
+"error_rpc_format" = "Erreur réseau %@ : %@";
+"error_cache_failed_format" = "Erreur de stockage local : %@";
+"error_migration_failed_format" = "Échec de la migration des données (v%d -> v%d). Réinstallez l'application.";
+"error_unknown_format" = "Une erreur inattendue s'est produite : %@";
+"error_recovery_no_connection" = "Vérifiez que le Wi-Fi ou les données cellulaires sont activés.";
+"error_recovery_session_expired" = "Saisissez votre numéro de téléphone pour vous reconnecter.";
+"error_recovery_rate_limited_format" = "Patientez %d secondes avant de réessayer.";
+"error_recovery_safety_number" = "Comparez les numéros de sécurité en personne avant de continuer.";
+"error_recovery_insufficient_balance" = "Ajoutez des fonds ou réduisez le montant de la transaction.";
+"profile_more_menu_logout" = "Déconnexion";
+"profile_top_bar_more_cd" = "Plus";
+"profile_top_bar_qr_cd" = "Code QR";

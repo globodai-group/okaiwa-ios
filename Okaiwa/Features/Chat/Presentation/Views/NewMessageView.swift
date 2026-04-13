@@ -56,27 +56,27 @@ public struct NewMessageView: View {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     UtilityActionRow(
                         systemIcon: "person.2.badge.plus",
-                        title: "Nouveau groupe",
-                        trailing: "Jusqu'à 500 membres",
+                        titleKey: "new_message_action_new_group",
+                        trailingKey: "new_message_action_new_group_trailing",
                         isBadge: false,
                         action: onCreateGroup
                     )
                     UtilityActionRow(
                         systemIcon: "megaphone.fill",
-                        title: "Nouveau canal",
-                        trailing: "Pro",
+                        titleKey: "new_message_action_new_channel",
+                        trailingKey: "new_message_action_new_channel_badge",
                         isBadge: true,
                         action: onCreateChannel
                     )
                     UtilityActionRow(
                         systemIcon: "person.crop.circle.badge.plus",
-                        title: "Inviter un contact",
-                        trailing: nil,
+                        titleKey: "new_message_action_invite_contact",
+                        trailingKey: nil,
                         isBadge: false,
                         action: onInviteContact
                     )
 
-                    sectionHeader("Trier par heure de connexion")
+                    sectionHeader(L10n.key("new_message_section_recent"))
 
                     ForEach(filteredContacts, id: \.conversationId) { row in
                         ContactListRow(row: row) {
@@ -111,7 +111,7 @@ public struct NewMessageView: View {
                     .foregroundStyle(OkaiwaColors.white)
                     .padding(12)
             }
-            Text("Nouveau message")
+            Text(L10n.key("new_message_title"))
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(OkaiwaColors.white)
             Spacer()
@@ -123,7 +123,7 @@ public struct NewMessageView: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(OkaiwaColors.muted)
-            TextField("", text: $query, prompt: Text("Rechercher des contacts").foregroundStyle(OkaiwaColors.placeholder))
+            TextField("", text: $query, prompt: Text(L10n.key("new_message_search_placeholder")).foregroundStyle(OkaiwaColors.placeholder))
                 .foregroundStyle(OkaiwaColors.white)
                 .tint(OkaiwaColors.lime)
                 .onChange(of: query) { _, newValue in
@@ -142,26 +142,34 @@ public struct NewMessageView: View {
         .padding(.vertical, 8)
     }
 
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title.uppercased())
+    /// Section header styled uppercase + muted — takes a resource key so
+    /// the case transform lands on the localized copy rather than on a
+    /// raw French string that might have no defined uppercase form in
+    /// the target locale (e.g. Turkish dotted i).
+    private func sectionHeader(_ key: LocalizedStringKey) -> some View {
+        Text(key)
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(OkaiwaColors.muted)
+            .textCase(.uppercase)
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
     }
 
-    /// French last-seen label mirror of `lastSeenLabel` on Android.
+    /// Localized last-seen label — same routing matrix as the Android
+    /// twin, but each branch resolves against `Localizable.strings` so
+    /// the picker flips the wording between "en ligne il y a 3 min"
+    /// and "online 3 min ago" without a relaunch.
     private static func lastSeenLabel(_ date: Date) -> String {
         let diff = Date().timeIntervalSince(date)
         let minutes = Int(diff / 60)
         let hours = Int(diff / 3600)
         let days = Int(diff / 86400)
         switch true {
-        case minutes < 2:  return "en ligne"
-        case minutes < 60: return "en ligne il y a \(minutes) min"
-        case hours < 24:   return "en ligne il y a \(hours) h"
-        case days < 7:     return "vu il y a \(days) j"
-        default:           return "vu récemment"
+        case minutes < 2:  return L10n.string("new_message_last_seen_online")
+        case minutes < 60: return L10n.string("new_message_last_seen_minutes_format", minutes)
+        case hours < 24:   return L10n.string("new_message_last_seen_hours_format", hours)
+        case days < 7:     return L10n.string("new_message_last_seen_days_format", days)
+        default:           return L10n.string("new_message_last_seen_recent")
         }
     }
 
@@ -176,8 +184,8 @@ public struct NewMessageView: View {
 
     private struct UtilityActionRow: View {
         let systemIcon: String
-        let title: String
-        let trailing: String?
+        let titleKey: String
+        let trailingKey: String?
         let isBadge: Bool
         let action: () -> Void
 
@@ -192,13 +200,13 @@ public struct NewMessageView: View {
                                 .font(.system(size: 18, weight: .semibold))
                                 .foregroundStyle(OkaiwaColors.lime)
                         )
-                    Text(title)
+                    Text(L10n.key(titleKey))
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(OkaiwaColors.white)
                     Spacer()
-                    if let trailing {
+                    if let trailingKey {
                         if isBadge {
-                            Text(trailing)
+                            Text(L10n.key(trailingKey))
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(OkaiwaColors.lime)
                                 .padding(.horizontal, 8)
@@ -206,7 +214,7 @@ public struct NewMessageView: View {
                                 .background(OkaiwaColors.lime.opacity(0.18))
                                 .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                         } else {
-                            Text(trailing)
+                            Text(L10n.key(trailingKey))
                                 .font(.system(size: 12))
                                 .foregroundStyle(OkaiwaColors.muted)
                         }
@@ -264,7 +272,7 @@ private struct DiscoveryResultRow: View {
             EmptyView()
 
         case .searching:
-            Text("Recherche…")
+            Text(L10n.key("new_message_discovery_searching"))
                 .font(.system(size: 12))
                 .foregroundStyle(OkaiwaColors.muted)
                 .padding(.horizontal, 16)
@@ -272,7 +280,7 @@ private struct DiscoveryResultRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
         case .notFound:
-            Text("Aucun utilisateur Okaiwa pour cet identifiant.")
+            Text(L10n.key("new_message_discovery_not_found"))
                 .font(.system(size: 13))
                 .foregroundStyle(OkaiwaColors.muted)
                 .padding(.horizontal, 16)
@@ -309,7 +317,7 @@ private struct DiscoveryResultRow: View {
                             .foregroundStyle(OkaiwaColors.muted)
                     }
                     Spacer()
-                    Text("Démarrer")
+                    Text(L10n.key("new_message_discovery_start_cta"))
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(OkaiwaColors.black)
                         .padding(.horizontal, 14)

@@ -42,7 +42,7 @@ struct ChatView: View {
             // Input bar
             inputBar
         }
-        .navigationTitle("Chat")
+        .navigationTitle(L10n.key("chat_nav_title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -50,19 +50,19 @@ struct ChatView: View {
                     Button {
                         // Set ephemeral timer
                     } label: {
-                        Label("Disappearing Messages", systemImage: "timer")
+                        Label(L10n.key("chat_menu_disappearing"), systemImage: "timer")
                     }
 
                     Button {
                         router.navigate(to: .conversationDetails(conversationId: conversationId))
                     } label: {
-                        Label("Conversation Info", systemImage: "info.circle")
+                        Label(L10n.key("chat_menu_conversation_info"), systemImage: "info.circle")
                     }
 
                     Button {
                         router.navigate(to: .verifyIdentity(contactId: conversationId))
                     } label: {
-                        Label("Verify Identity", systemImage: "checkmark.shield")
+                        Label(L10n.key("chat_menu_verify_identity"), systemImage: "checkmark.shield")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -95,27 +95,27 @@ struct ChatView: View {
                             Button {
                                 UIPasteboard.general.string = "Encrypted content" // Decrypted in prod
                             } label: {
-                                Label("Copy", systemImage: "doc.on.doc")
+                                Label(L10n.key("chat_action_copy"), systemImage: "doc.on.doc")
                             }
 
                             Button {
                                 replyingTo = message
                             } label: {
-                                Label("Reply", systemImage: "arrowshape.turn.up.left")
+                                Label(L10n.key("chat_action_reply"), systemImage: "arrowshape.turn.up.left")
                             }
 
                             if message.isMine(localFingerprint: localFingerprint) {
                                 Button(role: .destructive) {
                                     // Delete for everyone
                                 } label: {
-                                    Label("Delete for Everyone", systemImage: "trash")
+                                    Label(L10n.key("chat_action_delete_for_everyone"), systemImage: "trash")
                                 }
                             }
 
                             Button(role: .destructive) {
                                 // Delete locally
                             } label: {
-                                Label("Delete for Me", systemImage: "trash.slash")
+                                Label(L10n.key("chat_action_delete_for_me"), systemImage: "trash.slash")
                             }
                         }
                     }
@@ -146,7 +146,7 @@ struct ChatView: View {
                 }
 
                 // Text input
-                TextField("Message", text: $messageText, axis: .vertical)
+                TextField(L10n.key("chat_input_placeholder"), text: $messageText, axis: .vertical)
                     .lineLimit(1...6)
                     .textFieldStyle(.plain)
                     .padding(.horizontal, OkaiwaTheme.Spacing.sm)
@@ -189,11 +189,11 @@ struct ChatView: View {
                 .frame(width: 3)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Replying to")
+                Text(L10n.key("chat_reply_prefix"))
                     .font(OkaiwaTheme.Typography.caption2)
                     .foregroundStyle(OkaiwaTheme.Colors.primaryFallback)
 
-                Text("Encrypted message")
+                Text(L10n.key("chat_message_placeholder_body"))
                     .font(OkaiwaTheme.Typography.caption)
                     .foregroundStyle(OkaiwaTheme.Colors.textSecondary)
                     .lineLimit(1)
@@ -274,7 +274,7 @@ struct MessageBubble: View {
 
             VStack(alignment: isMine ? .trailing : .leading, spacing: OkaiwaTheme.Spacing.xxs) {
                 // Message content
-                Text("Encrypted message") // Decrypted content in production
+                Text(L10n.key("chat_message_placeholder_body")) // Decrypted content in production
                     .font(OkaiwaTheme.Typography.body)
                     .foregroundStyle(OkaiwaTheme.Colors.textPrimary)
 

@@ -7,10 +7,23 @@ import Foundation
 /// the ISO-3166-1 alpha-2 code via regional indicator symbols.
 public struct Country: Identifiable, Hashable, Equatable {
     public let isoCode: String
+    /// Fallback display name in French — only used when the device
+    /// locale doesn't know the ISO code (extremely rare for iOS, but
+    /// some 3-letter or non-standard codes may not resolve). Prefer
+    /// `localizedName` everywhere in the UI.
     public let name: String
     public let dialCode: String
 
     public var id: String { isoCode }
+
+    /// Display name in the user's CURRENT locale, derived from CLDR.
+    /// Returns "United States" for an EN-locale device, "États-Unis"
+    /// for FR, "美国" for ZH, etc. Falls back to the hardcoded `name`
+    /// (FR) only if Locale doesn't recognize the ISO code, which
+    /// happens for non-standard / disputed regions.
+    public var localizedName: String {
+        Locale.current.localizedString(forRegionCode: isoCode) ?? name
+    }
 
     public var flagEmoji: String {
         // Regional Indicator Symbols live at U+1F1E6..U+1F1FF, offset

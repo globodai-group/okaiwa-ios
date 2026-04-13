@@ -1,0 +1,42 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+   Copyright 2026 Globodai FZCO
+
+   French localization for the OkaiwaCore module. Contains error
+   descriptions consumed by AppError and tab labels consumed by
+   MainScaffold. Keys mirror the same prefixes used in
+   OkaiwaFeatures/Resources so the two tables can be merged in the
+   future without renames.
+*/
+
+// MARK: - Main tabs (mirrored in OkaiwaFeatures/Resources so both
+// bundles resolve against the same keys).
+"tab_chats" = "Échanges";
+"tab_wallet" = "Wallet";
+"tab_settings" = "Paramètres";
+"tab_profile" = "Profil";
+
+// MARK: - AppError descriptions
+"error_server_format" = "Erreur serveur (%d) : %@";
+"error_timeout" = "La requête a expiré. Vérifiez votre connexion et réessayez.";
+"error_no_connection" = "Aucune connexion internet. Vérifiez votre réseau.";
+"error_invalid_response_format" = "Réponse serveur inattendue : %@";
+"error_encryption_failed_format" = "Erreur de chiffrement : %@";
+"error_key_format" = "Erreur de gestion des clés : %@";
+"error_safety_number_mismatch" = "Le numéro de sécurité de ce contact a changé. Vérifiez son identité.";
+"error_prekey_exhausted" = "Impossible d'établir une session sécurisée. Les pré-clés du contact sont épuisées.";
+"error_session_expired" = "Votre session a expiré. Reconnectez-vous.";
+"error_invalid_verification_code" = "Le code de vérification est incorrect. Réessayez.";
+"error_rate_limited_format" = "Trop de requêtes. Patientez %d secondes avant de réessayer.";
+"error_registration_denied_format" = "Inscription refusée : %@";
+"error_tx_signing_failed_format" = "Échec de la signature de la transaction : %@";
+"error_insufficient_balance_format" = "Solde insuffisant. Requis : %@, disponible : %@";
+"error_invalid_address_format" = "Adresse invalide : %@";
+"error_rpc_format" = "Erreur réseau %@ : %@";
+"error_cache_failed_format" = "Erreur de stockage local : %@";
+"error_migration_failed_format" = "Échec de la migration des données (v%d -> v%d). Réinstallez l'application.";
+"error_unknown_format" = "Une erreur inattendue s'est produite : %@";
+"error_recovery_no_connection" = "Vérifiez que le Wi-Fi ou les données cellulaires sont activés.";
+"error_recovery_session_expired" = "Saisissez votre numéro de téléphone pour vous reconnecter.";
+"error_recovery_rate_limited_format" = "Patientez %d secondes avant de réessayer.";
+"error_recovery_safety_number" = "Comparez les numéros de sécurité en personne avant de continuer.";
+"error_recovery_insufficient_balance" = "Ajoutez des fonds ou réduisez le montant de la transaction.";

@@ -1,0 +1,37 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later
+   Copyright 2026 Globodai FZCO
+
+   English localization for the OkaiwaCore module.
+*/
+
+// MARK: - Main tabs (mirrored in OkaiwaFeatures/Resources).
+"tab_chats" = "Chats";
+"tab_wallet" = "Wallet";
+"tab_settings" = "Settings";
+"tab_profile" = "Profile";
+
+// MARK: - AppError descriptions
+"error_server_format" = "Server error (%d): %@";
+"error_timeout" = "The request timed out. Please check your connection and try again.";
+"error_no_connection" = "No internet connection. Please check your network settings.";
+"error_invalid_response_format" = "Unexpected server response: %@";
+"error_encryption_failed_format" = "Encryption error: %@";
+"error_key_format" = "Key management error: %@";
+"error_safety_number_mismatch" = "The safety number for this contact has changed. Please verify their identity.";
+"error_prekey_exhausted" = "Unable to establish a secure session. The contact's pre-keys are exhausted.";
+"error_session_expired" = "Your session has expired. Please sign in again.";
+"error_invalid_verification_code" = "The verification code is incorrect. Please try again.";
+"error_rate_limited_format" = "Too many requests. Please wait %d seconds and try again.";
+"error_registration_denied_format" = "Registration denied: %@";
+"error_tx_signing_failed_format" = "Transaction signing failed: %@";
+"error_insufficient_balance_format" = "Insufficient balance. Required: %@, Available: %@";
+"error_invalid_address_format" = "Invalid address: %@";
+"error_rpc_format" = "%@ network error: %@";
+"error_cache_failed_format" = "Local storage error: %@";
+"error_migration_failed_format" = "Data migration failed (v%d -> v%d). Please reinstall the app.";
+"error_unknown_format" = "An unexpected error occurred: %@";
+"error_recovery_no_connection" = "Check that Wi-Fi or cellular data is enabled.";
+"error_recovery_session_expired" = "Re-enter your phone number to sign in.";
+"error_recovery_rate_limited_format" = "Wait %d seconds before trying again.";
+"error_recovery_safety_number" = "Compare safety numbers in person before continuing.";
+"error_recovery_insufficient_balance" = "Add funds to your wallet or reduce the transaction amount.";

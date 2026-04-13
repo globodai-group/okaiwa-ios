@@ -2,6 +2,11 @@
 // Copyright 2026 Globodai FZCO
 
 import SwiftUI
+// Imports required for `L10n` (localization helper) + feature Views
+// referenced below. The host target links against both libraries in
+// the Xcode project; keep these two lines in sync with that config.
+import OkaiwaCore
+import OkaiwaFeatures
 
 /// Root view that switches between authentication and main app flows.
 ///
@@ -44,19 +49,25 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                ConversationListView()
+                ConversationListView(
+                    onNavigateToChat: { _ in },
+                    onNavigateToContacts: {}
+                )
             }
             .tabItem {
-                Label("Chats", systemImage: "message.fill")
+                Label(Text(L10n.string("tab_chats")), systemImage: "message.fill")
             }
             .tag(AppTab.chats)
 
             NavigationStack {
-                Text("Contacts") // Placeholder for ContactsListView
-                    .navigationTitle("Contacts")
+                // Placeholder for ContactsListView — the raw text is
+                // left verbatim because this screen is swapped out
+                // before the screen is reachable by end users.
+                Text(verbatim: "Contacts")
+                    .navigationTitle(Text(verbatim: "Contacts"))
             }
             .tabItem {
-                Label("Contacts", systemImage: "person.2.fill")
+                Label(Text(verbatim: "Contacts"), systemImage: "person.2.fill")
             }
             .tag(AppTab.contacts)
 
@@ -64,16 +75,16 @@ struct MainTabView: View {
                 WalletView()
             }
             .tabItem {
-                Label("Wallet", systemImage: "creditcard.fill")
+                Label(Text(L10n.string("tab_wallet")), systemImage: "creditcard.fill")
             }
             .tag(AppTab.wallet)
 
             NavigationStack {
-                Text("Calls") // Placeholder for CallsListView
-                    .navigationTitle("Calls")
+                Text(verbatim: "Calls") // Placeholder for CallsListView
+                    .navigationTitle(Text(verbatim: "Calls"))
             }
             .tabItem {
-                Label("Calls", systemImage: "phone.fill")
+                Label(Text(verbatim: "Calls"), systemImage: "phone.fill")
             }
             .tag(AppTab.calls)
 
@@ -81,7 +92,7 @@ struct MainTabView: View {
                 SettingsView()
             }
             .tabItem {
-                Label("Settings", systemImage: "gearshape.fill")
+                Label(Text(L10n.string("tab_settings")), systemImage: "gearshape.fill")
             }
             .tag(AppTab.settings)
         }
@@ -111,7 +122,7 @@ struct ErrorRecoveryView: View {
                 .font(.system(size: 56))
                 .foregroundStyle(OkaiwaTheme.Colors.destructive)
 
-            Text("Something went wrong")
+            Text(L10n.string("error_recovery_title"))
                 .font(OkaiwaTheme.Typography.headline)
 
             Text(message)
@@ -120,7 +131,7 @@ struct ErrorRecoveryView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, OkaiwaTheme.Spacing.xl)
 
-            Button("Try Again", action: onRetry)
+            Button(L10n.string("error_recovery_retry"), action: onRetry)
                 .buttonStyle(.borderedProminent)
                 .tint(OkaiwaTheme.Colors.primaryFallback)
         }
