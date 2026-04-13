@@ -19,7 +19,7 @@ set -euo pipefail
 # Manual major/minor — bump for user-facing milestones. Keep in sync
 # with okaiwaMajor / okaiwaMinor in okaiwa-android/app/build.gradle.kts.
 readonly OKAIWA_MAJOR=1
-readonly OKAIWA_MINOR=0
+readonly OKAIWA_MINOR=5
 
 # Locate the repo root. When called as a build phase Xcode sets SRCROOT.
 REPO_ROOT="${SRCROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
