@@ -10,8 +10,20 @@ import os
 /// - excluded from iCloud + local backups,
 /// - not migrated to a new device on restore.
 ///
-/// The in-memory `@Observable` snapshot mirrors disk so SwiftUI views
-/// can observe sign-in / sign-out without polling the Keychain.
+/// Persistence policy by field:
+///   - accountId, accessToken, refreshToken, expiresAt → Keychain
+///   - phoneHash → IN-MEMORY ONLY, never written to Keychain
+///
+/// The phone hash is excluded from disk by design: it lets an attacker
+/// with Keychain read access (jailbroken device, another app in the
+/// same access group if misconfigured) confirm the device owner's
+/// phone number by hashing every candidate E.164 number and comparing.
+/// Keeping it in RAM means a clean app launch starts with an empty
+/// phoneHash, and the user is asked to enter their number again
+/// before /v1/auth/verify can be called.
+///
+/// The in-memory `@Observable` snapshot mirrors the Keychain so
+/// SwiftUI views can observe sign-in / sign-out without polling.
 @Observable
 @MainActor
 final class SessionStore {
@@ -36,7 +48,6 @@ final class SessionStore {
         static let accessToken = "identity.session.access_token"
         static let refreshToken = "identity.session.refresh_token"
         static let accountId = "identity.session.account_id"
-        static let phoneHash = "identity.session.phone_hash"
         static let expiresAt = "identity.session.expires_at"
     }
 
@@ -50,7 +61,6 @@ final class SessionStore {
     func save(_ session: Session) {
         do {
             try keychain.saveString(session.accountId, forKey: Key.accountId)
-            try keychain.saveString(session.phoneHash, forKey: Key.phoneHash)
             try keychain.saveString(session.accessToken, forKey: Key.accessToken)
             try keychain.saveString(session.refreshToken, forKey: Key.refreshToken)
             try keychain.saveString(String(session.expiresAtEpochSeconds), forKey: Key.expiresAt)
@@ -62,7 +72,7 @@ final class SessionStore {
     }
 
     func clear() {
-        for key in [Key.accessToken, Key.refreshToken, Key.accountId, Key.phoneHash, Key.expiresAt] {
+        for key in [Key.accessToken, Key.refreshToken, Key.accountId, Key.expiresAt] {
             try? keychain.delete(forKey: key)
         }
         current = nil
@@ -74,21 +84,23 @@ final class SessionStore {
     private static func loadFromDisk(_ keychain: KeychainManager) -> Session? {
         guard
             let accountId = try? keychain.loadString(forKey: Key.accountId),
-            let phoneHash = try? keychain.loadString(forKey: Key.phoneHash),
             let accessToken = try? keychain.loadString(forKey: Key.accessToken),
             let refreshToken = try? keychain.loadString(forKey: Key.refreshToken),
             let expiresRaw = try? keychain.loadString(forKey: Key.expiresAt),
             let accountIdValue = accountId,
-            let phoneHashValue = phoneHash,
             let accessTokenValue = accessToken,
             let refreshTokenValue = refreshToken,
             let expiresValue = expiresRaw,
             let expiresAt = Int64(expiresValue)
         else { return nil }
 
+        // phoneHash is intentionally not restored — see the class kdoc.
+        // The session is hydrated without it; the verify step will fail
+        // until the user re-enters the phone, which calls register()
+        // again and refreshes the in-memory hash.
         return Session(
             accountId: accountIdValue,
-            phoneHash: phoneHashValue,
+            phoneHash: "",
             accessToken: accessTokenValue,
             refreshToken: refreshTokenValue,
             expiresAtEpochSeconds: expiresAt
