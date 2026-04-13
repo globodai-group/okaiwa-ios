@@ -24,8 +24,13 @@ actor IdentityProfileClient {
 
     /// PUT /v1/profile — partial update. Pass only the fields the user
     /// changed; the server keeps the rest as-is.
+    ///
+    /// Auth: Bearer token signed by the identity service's
+    /// `IDENTITY_SESSION_SECRET`. Server-side SessionAuthMiddleware
+    /// validates the HMAC and derives accountId — we never send
+    /// accountId on the wire (which would be a forgeable bypass).
     func updateProfile(
-        accountId: String,
+        accessToken: String,
         body: UpdateProfileRequest
     ) async throws -> UpdateProfileResponse {
         var request = URLRequest(url: baseURL.appendingPathComponent("profile"))
@@ -33,9 +38,23 @@ actor IdentityProfileClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Okaiwa-iOS/0.1.0", forHTTPHeaderField: "User-Agent")
-        request.setValue(accountId, forHTTPHeaderField: "x-account-id")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         request.httpBody = try encoder.encode(body)
+        return try await send(request, endpoint: "profile-put")
+    }
 
+    /// GET /v1/profile/me — auth-required. Returns the caller's full
+    /// profile (incl. private fields).
+    func getMyProfile(accessToken: String) async throws -> MyProfileResponse {
+        var request = URLRequest(url: baseURL.appendingPathComponent("profile/me"))
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Okaiwa-iOS/0.1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        return try await send(request, endpoint: "profile-me")
+    }
+
+    private func send<T: Decodable>(_ request: URLRequest, endpoint: String) async throws -> T {
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: request)
@@ -44,25 +63,45 @@ actor IdentityProfileClient {
         }
 
         guard let http = response as? HTTPURLResponse else {
-            throw AppError.invalidResponse(detail: "Non-HTTP response on profile")
+            throw AppError.invalidResponse(detail: "Non-HTTP response on \(endpoint)")
         }
 
         switch http.statusCode {
         case 200...299:
-            return try decoder.decode(UpdateProfileResponse.self, from: data)
+            do {
+                return try decoder.decode(T.self, from: data)
+            } catch {
+                logger.error("\(endpoint) — decode failure: \(error.localizedDescription)")
+                throw AppError.invalidResponse(detail: "Malformed \(endpoint) response")
+            }
+        case 401, 403:
+            throw AppError.sessionExpired
+        case 404:
+            throw ProfileClientError.notFound
         case 409:
             throw ProfileClientError.usernameTaken
         case 429:
             throw AppError.rateLimited(retryAfterSeconds: 30)
         default:
-            let bodyStr = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
-            throw AppError.server(statusCode: http.statusCode, message: bodyStr)
+            // NEVER surface raw server body to the UI — the catch in
+            // the model layer is responsible for mapping to a
+            // localized string. We ship the status code only.
+            throw AppError.server(statusCode: http.statusCode, message: "HTTP \(http.statusCode)")
         }
     }
 }
 
 enum ProfileClientError: Error {
     case usernameTaken
+    case notFound
+}
+
+/// Body of GET /v1/profile/me.
+struct MyProfileResponse: Codable {
+    let accountId: String
+    let username: String?
+    let identityPublicKey: String?
+    let profile: UpdatedProfile?
 }
 
 /// Body of PUT /v1/profile. All fields are optional — the server

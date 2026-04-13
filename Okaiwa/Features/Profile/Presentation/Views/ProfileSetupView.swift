@@ -121,9 +121,18 @@ private struct UsernameField: View {
         TextField("", text: Binding(
             get: { value },
             set: { newValue in
-                // Live-strip non-allowed characters so the regex never
-                // sees them; the visible field stays in [a-zA-Z0-9_].
-                value = newValue.filter { $0.isLetter || $0.isNumber || $0 == "_" }
+                // Live-strip to ASCII alphanumeric + underscore. The
+                // SwiftUI helpers `isLetter` / `isNumber` accept ALL
+                // Unicode (é, 漢, ٣ …) which would pass the keystroke
+                // filter but fail the server's `^[a-zA-Z0-9_]+$`
+                // regex, leaving the user staring at characters that
+                // mysteriously kept the submit button disabled.
+                value = newValue.unicodeScalars
+                    .filter { ($0.value >= 0x30 && $0.value <= 0x39)        // 0-9
+                           || ($0.value >= 0x41 && $0.value <= 0x5A)        // A-Z
+                           || ($0.value >= 0x61 && $0.value <= 0x7A)        // a-z
+                           || $0.value == 0x5F }                            // _
+                    .reduce(into: "") { $0.unicodeScalars.append($1) }
             }
         ), prompt: Text("@nomutilisateur").foregroundStyle(OkaiwaColors.placeholder))
             .foregroundStyle(OkaiwaColors.white)
@@ -195,7 +204,8 @@ final class ProfileSetupModel {
 
     func submit() async {
         guard isSubmitEnabled else { return }
-        guard let accountId = sessionStore.current?.accountId, !accountId.isEmpty else {
+        guard let session = sessionStore.current,
+              !session.accessToken.isEmpty else {
             error = "Session expirée — reconnectez-vous."
             return
         }
@@ -205,7 +215,7 @@ final class ProfileSetupModel {
 
         do {
             _ = try await client.updateProfile(
-                accountId: accountId,
+                accessToken: session.accessToken,
                 body: UpdateProfileRequest(
                     username: username,
                     displayName: displayName.isEmpty ? nil : displayName,
@@ -216,13 +226,19 @@ final class ProfileSetupModel {
                 )
             )
             sessionStore.markProfileSetupDone()
+            // Hot-cache the canonical server state so the Profile tab
+            // renders the just-saved values immediately on first
+            // selection, not the empty initial fallback.
+            await RemoteProfileRepository.shared.refresh()
             done = true
         } catch ProfileClientError.usernameTaken {
             error = "Ce nom d'utilisateur est déjà pris."
-        } catch let appError as AppError {
-            error = appError.errorDescription ?? "Erreur réseau"
+        } catch AppError.sessionExpired {
+            error = "Session expirée — reconnectez-vous."
         } catch {
-            self.error = error.localizedDescription
+            // Generic copy on any transport / 5xx failure — never
+            // surface raw server body or exception message to the UI.
+            error = "Connexion impossible. Vérifiez votre réseau."
         }
     }
 

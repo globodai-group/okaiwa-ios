@@ -18,7 +18,12 @@ public struct ProfileView: View {
     var onAddPublication: () -> Void = {}
 
     @Environment(\.floatingBarInset) private var floatingBarInset: CGFloat
-    @ObservedObject private var repo = MockProfileRepository.shared
+    // Switched from MockProfileRepository (hardcoded Kevin / @asmista
+    // / Globodai) to the live repo that fetches GET /v1/profile/me
+    // on first appear. See RemoteProfileRepository for the network
+    // strategy and the security review on okaiwa-android@386d11d for
+    // why the bind moved.
+    @ObservedObject private var repo = RemoteProfileRepository.shared
     @State private var selectedTab: PublicationTab = .active
 
     public init() {}
@@ -47,6 +52,7 @@ public struct ProfileView: View {
                 Spacer()
             }
         }
+        .task { repo.start() }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(OkaiwaColors.black)
     }

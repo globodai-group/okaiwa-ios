@@ -11,16 +11,23 @@ import os
 /// - not migrated to a new device on restore.
 ///
 /// Persistence policy by field:
-///   - accountId, accessToken, refreshToken, expiresAt → Keychain
+///   - everything except phoneHash → ONE JSON blob in the Keychain
 ///   - phoneHash → IN-MEMORY ONLY, never written to Keychain
 ///
-/// The phone hash is excluded from disk by design: it lets an attacker
-/// with Keychain read access (jailbroken device, another app in the
-/// same access group if misconfigured) confirm the device owner's
-/// phone number by hashing every candidate E.164 number and comparing.
-/// Keeping it in RAM means a clean app launch starts with an empty
-/// phoneHash, and the user is asked to enter their number again
-/// before /v1/auth/verify can be called.
+/// Why one blob rather than seven keys: the previous multi-write
+/// pattern was non-atomic. A process kill or Keychain failure
+/// mid-`save()` could leave a half-written record where accessToken
+/// was set but deviceToken was not, which made the splash gate route
+/// to Welcome while the stale tokens remained on disk indefinitely
+/// (security review on okaiwa-android@386d11d, P0 confidence 8/10).
+/// A single Keychain item inherits SecItemAdd / SecItemUpdate's
+/// all-or-nothing semantics.
+///
+/// The phone hash is excluded from disk by design: it lets an
+/// attacker with Keychain read access (jailbroken device, another app
+/// in the same access group if misconfigured) confirm the device
+/// owner's phone number by hashing every candidate E.164 number and
+/// comparing.
 ///
 /// The in-memory `@Observable` snapshot mirrors the Keychain so
 /// SwiftUI views can observe sign-in / sign-out without polling.
@@ -55,14 +62,13 @@ final class SessionStore {
     private let logger = Logger(subsystem: "io.okaiwa.app", category: "SessionStore")
 
     private enum Key {
-        static let accessToken = "identity.session.access_token"
-        static let refreshToken = "identity.session.refresh_token"
-        static let accountId = "identity.session.account_id"
-        static let expiresAt = "identity.session.expires_at"
-        static let deviceId = "identity.session.device_id"
-        static let deviceToken = "identity.session.device_token"
-        static let profileSetupDone = "identity.session.profile_setup_done"
+        static let blob = "identity.session.v1"
     }
+
+    /// Bumped when [PersistedSession] gains/loses a field in an
+    /// incompatible way. Older blobs are wiped on load instead of
+    /// produce subtle hydrated-with-defaults bugs.
+    private static let schemaVersion: Int = 1
 
     init(keychain: KeychainManager = KeychainManager()) {
         self.keychain = keychain
@@ -72,18 +78,33 @@ final class SessionStore {
     // MARK: - Mutations
 
     func save(_ session: Session) {
+        let persisted = PersistedSession(
+            schemaVersion: Self.schemaVersion,
+            accountId: session.accountId,
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+            expiresAtEpochSeconds: session.expiresAtEpochSeconds,
+            deviceId: session.deviceId,
+            deviceToken: session.deviceToken,
+            profileSetupDone: session.profileSetupDone
+        )
         do {
-            try keychain.saveString(session.accountId, forKey: Key.accountId)
-            try keychain.saveString(session.accessToken, forKey: Key.accessToken)
-            try keychain.saveString(session.refreshToken, forKey: Key.refreshToken)
-            try keychain.saveString(String(session.expiresAtEpochSeconds), forKey: Key.expiresAt)
-            try keychain.saveString(session.deviceId, forKey: Key.deviceId)
-            try keychain.saveString(session.deviceToken, forKey: Key.deviceToken)
-            try keychain.saveString(session.profileSetupDone ? "1" : "0", forKey: Key.profileSetupDone)
+            let data = try JSONEncoder().encode(persisted)
+            try keychain.save(data: data, forKey: Key.blob)
             current = session
-            logger.info("Session saved — account \(session.accountId.prefix(8), privacy: .public)")
+            // accountId is a stable cross-session identifier; logging
+            // it as `.public` would persist it into Sysdiagnose archives
+            // and let support tooling correlate users across sessions.
+            // `.private` keeps it out of unified logs unless the user
+            // explicitly opts in via a profile.
+            logger.info("Session saved — account \(session.accountId.prefix(8), privacy: .private)")
         } catch {
-            logger.error("Session persist failure: \(error.localizedDescription)")
+            // Persistence failed — DO NOT update the in-memory snapshot.
+            // The user's next API call surfaces a session-expired path
+            // naturally; better that than a half-saved state where the
+            // UI thinks the user is signed in but tokens won't survive
+            // the next launch.
+            logger.error("Session persist failure — keeping prior in-memory state")
         }
     }
 
@@ -96,9 +117,7 @@ final class SessionStore {
     }
 
     func clear() {
-        for key in [Key.accessToken, Key.refreshToken, Key.accountId, Key.expiresAt, Key.deviceId, Key.deviceToken, Key.profileSetupDone] {
-            try? keychain.delete(forKey: key)
-        }
+        try? keychain.delete(forKey: Key.blob)
         current = nil
         logger.info("Session cleared")
     }
@@ -107,34 +126,45 @@ final class SessionStore {
 
     private static func loadFromDisk(_ keychain: KeychainManager) -> Session? {
         guard
-            let accountId = try? keychain.loadString(forKey: Key.accountId),
-            let accessToken = try? keychain.loadString(forKey: Key.accessToken),
-            let refreshToken = try? keychain.loadString(forKey: Key.refreshToken),
-            let expiresRaw = try? keychain.loadString(forKey: Key.expiresAt),
-            let accountIdValue = accountId,
-            let accessTokenValue = accessToken,
-            let refreshTokenValue = refreshToken,
-            let expiresValue = expiresRaw,
-            let expiresAt = Int64(expiresValue)
+            let dataOpt = try? keychain.load(forKey: Key.blob),
+            let data = dataOpt
         else { return nil }
 
-        let deviceId = ((try? keychain.loadString(forKey: Key.deviceId)) ?? nil) ?? ""
-        let deviceToken = ((try? keychain.loadString(forKey: Key.deviceToken)) ?? nil) ?? ""
-        let profileDoneRaw = ((try? keychain.loadString(forKey: Key.profileSetupDone)) ?? nil) ?? "0"
+        guard let persisted = try? JSONDecoder().decode(PersistedSession.self, from: data),
+              persisted.schemaVersion == schemaVersion
+        else {
+            // Schema mismatch or corrupted blob — wipe and force a
+            // clean slate. Better to make the user re-authenticate
+            // than to ship them into a half-hydrated state where some
+            // fields default to "" and produce subtle bugs.
+            try? keychain.delete(forKey: Key.blob)
+            return nil
+        }
 
         // phoneHash is intentionally not restored — see the class kdoc.
-        // The session is hydrated without it; the verify step will fail
-        // until the user re-enters the phone, which calls register()
-        // again and refreshes the in-memory hash.
         return Session(
-            accountId: accountIdValue,
+            accountId: persisted.accountId,
             phoneHash: "",
-            accessToken: accessTokenValue,
-            refreshToken: refreshTokenValue,
-            expiresAtEpochSeconds: expiresAt,
-            deviceId: deviceId,
-            deviceToken: deviceToken,
-            profileSetupDone: profileDoneRaw == "1"
+            accessToken: persisted.accessToken,
+            refreshToken: persisted.refreshToken,
+            expiresAtEpochSeconds: persisted.expiresAtEpochSeconds,
+            deviceId: persisted.deviceId,
+            deviceToken: persisted.deviceToken,
+            profileSetupDone: persisted.profileSetupDone
         )
     }
+}
+
+/// Wire-format struct persisted in the Keychain. Kept separate from
+/// the in-memory `Session` so we can include a schema version tag and
+/// explicitly EXCLUDE phoneHash from disk.
+private struct PersistedSession: Codable {
+    let schemaVersion: Int
+    let accountId: String
+    let accessToken: String
+    let refreshToken: String
+    let expiresAtEpochSeconds: Int64
+    let deviceId: String
+    let deviceToken: String
+    let profileSetupDone: Bool
 }
