@@ -33,9 +33,19 @@ final class SessionStore {
         let accessToken: String
         let refreshToken: String
         let expiresAtEpochSeconds: Int64
+        var deviceId: String = ""
+        var deviceToken: String = ""
+        /// Whether the post-verify profile setup (username, displayName,
+        /// …) has been completed. Used by the navigation layer to
+        /// decide between ProfileSetup and Main on cold start.
+        var profileSetupDone: Bool = false
 
         var isFresh: Bool {
             Int64(Date().timeIntervalSince1970) < expiresAtEpochSeconds
+        }
+
+        var isVerified: Bool {
+            !accessToken.isEmpty && !deviceToken.isEmpty
         }
     }
 
@@ -49,6 +59,9 @@ final class SessionStore {
         static let refreshToken = "identity.session.refresh_token"
         static let accountId = "identity.session.account_id"
         static let expiresAt = "identity.session.expires_at"
+        static let deviceId = "identity.session.device_id"
+        static let deviceToken = "identity.session.device_token"
+        static let profileSetupDone = "identity.session.profile_setup_done"
     }
 
     init(keychain: KeychainManager = KeychainManager()) {
@@ -64,6 +77,9 @@ final class SessionStore {
             try keychain.saveString(session.accessToken, forKey: Key.accessToken)
             try keychain.saveString(session.refreshToken, forKey: Key.refreshToken)
             try keychain.saveString(String(session.expiresAtEpochSeconds), forKey: Key.expiresAt)
+            try keychain.saveString(session.deviceId, forKey: Key.deviceId)
+            try keychain.saveString(session.deviceToken, forKey: Key.deviceToken)
+            try keychain.saveString(session.profileSetupDone ? "1" : "0", forKey: Key.profileSetupDone)
             current = session
             logger.info("Session saved — account \(session.accountId.prefix(8), privacy: .public)")
         } catch {
@@ -71,8 +87,16 @@ final class SessionStore {
         }
     }
 
+    /// Shorthand to mark the user's profile setup as complete without
+    /// having to reconstruct the full session struct at every call site.
+    func markProfileSetupDone() {
+        guard var session = current else { return }
+        session.profileSetupDone = true
+        save(session)
+    }
+
     func clear() {
-        for key in [Key.accessToken, Key.refreshToken, Key.accountId, Key.expiresAt] {
+        for key in [Key.accessToken, Key.refreshToken, Key.accountId, Key.expiresAt, Key.deviceId, Key.deviceToken, Key.profileSetupDone] {
             try? keychain.delete(forKey: key)
         }
         current = nil
@@ -94,6 +118,10 @@ final class SessionStore {
             let expiresAt = Int64(expiresValue)
         else { return nil }
 
+        let deviceId = ((try? keychain.loadString(forKey: Key.deviceId)) ?? nil) ?? ""
+        let deviceToken = ((try? keychain.loadString(forKey: Key.deviceToken)) ?? nil) ?? ""
+        let profileDoneRaw = ((try? keychain.loadString(forKey: Key.profileSetupDone)) ?? nil) ?? "0"
+
         // phoneHash is intentionally not restored — see the class kdoc.
         // The session is hydrated without it; the verify step will fail
         // until the user re-enters the phone, which calls register()
@@ -103,7 +131,10 @@ final class SessionStore {
             phoneHash: "",
             accessToken: accessTokenValue,
             refreshToken: refreshTokenValue,
-            expiresAtEpochSeconds: expiresAt
+            expiresAtEpochSeconds: expiresAt,
+            deviceId: deviceId,
+            deviceToken: deviceToken,
+            profileSetupDone: profileDoneRaw == "1"
         )
     }
 }

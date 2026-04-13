@@ -161,6 +161,9 @@ struct RegisterRequest: Codable {
 
 struct RegisterResponse: Codable {
     let accountId: String
+    /// Relay-addressable device identifier (UUIDv4). Only present
+    /// since the deviceId migration on the identity service.
+    let deviceId: String?
     let status: String
 }
 
@@ -169,10 +172,20 @@ struct VerifyRequest: Codable {
     let code: String
 }
 
+/// Response to `POST /v1/auth/verify`. The verify endpoint is the only
+/// place the relay deviceToken is minted — refresh re-issues the
+/// session tokens but NOT the deviceToken (which is long-lived per
+/// the relay's MAX_TOKEN_AGE_SECONDS check).
 struct SessionTokenResponse: Codable {
     let sessionToken: String
     let refreshToken: String
     let expiresIn: Int
+    /// Relay-addressable device identifier — only present on verify.
+    let deviceId: String?
+    /// HMAC-signed token of the form `{deviceId}.{timestamp}.{hmac}`.
+    /// Required as `Authorization: Bearer <deviceToken>` on every
+    /// relay request. Only present on verify.
+    let deviceToken: String?
 }
 
 struct RefreshRequest: Codable {

@@ -65,7 +65,10 @@ final class IdentityAuthService {
                 phoneHash: phoneHash,
                 accessToken: "",
                 refreshToken: "",
-                expiresAtEpochSeconds: 0
+                expiresAtEpochSeconds: 0,
+                deviceId: response.deviceId ?? "",
+                deviceToken: "",
+                profileSetupDone: false
             )
         )
         logger.info("Registered — account \(response.accountId.prefix(8), privacy: .public)")
@@ -107,7 +110,10 @@ final class IdentityAuthService {
                 phoneHash: pending.phoneHash,
                 accessToken: response.sessionToken,
                 refreshToken: response.refreshToken,
-                expiresAtEpochSeconds: Int64(Date().timeIntervalSince1970) + Int64(response.expiresIn)
+                expiresAtEpochSeconds: Int64(Date().timeIntervalSince1970) + Int64(response.expiresIn),
+                deviceId: response.deviceId ?? pending.deviceId,
+                deviceToken: response.deviceToken ?? "",
+                profileSetupDone: pending.profileSetupDone
             )
         )
         logger.info("Verified — account \(pending.accountId.prefix(8), privacy: .public)")
@@ -128,7 +134,13 @@ final class IdentityAuthService {
                 phoneHash: pending.phoneHash,
                 accessToken: response.sessionToken,
                 refreshToken: response.refreshToken,
-                expiresAtEpochSeconds: Int64(Date().timeIntervalSince1970) + Int64(response.expiresIn)
+                expiresAtEpochSeconds: Int64(Date().timeIntervalSince1970) + Int64(response.expiresIn),
+                // Refresh re-issues session tokens but NOT the
+                // deviceToken (long-lived per relay's
+                // MAX_TOKEN_AGE_SECONDS). Keep the existing one.
+                deviceId: response.deviceId ?? pending.deviceId,
+                deviceToken: response.deviceToken ?? pending.deviceToken,
+                profileSetupDone: pending.profileSetupDone
             )
         )
     }

@@ -20,6 +20,11 @@ public struct OnboardingFlow: View {
         case welcome
         case phoneEntry(mode: PhoneEntryMode)
         case otpVerification(phoneDisplay: String)
+        /// Post-OTP (or post-login on a fresh device) — the user picks
+        /// a username + optional displayName / bio. Only shown once;
+        /// the `profileSetupDone` flag in SessionStore makes subsequent
+        /// cold launches skip straight to `.complete`.
+        case profileSetup
         case complete
     }
 
@@ -48,7 +53,14 @@ public struct OnboardingFlow: View {
         ZStack {
             switch step {
             case .splash:
-                SplashView { step = .welcome }
+                // Read the persisted session ONCE at splash time so the
+                // entry route reflects whether the user is already
+                // authenticated. Same routing matrix as Android's
+                // SessionGateViewModel — single source of truth here.
+                SplashView {
+                    step = nextStepAfterSplash()
+                    if step == .complete { onComplete() }
+                }
 
             case .welcome:
                 WelcomeView(
@@ -88,6 +100,15 @@ public struct OnboardingFlow: View {
                     },
                     isLoading: isSubmitting,
                     errorMessage: otpError
+                )
+
+            case .profileSetup:
+                ProfileSetupView(
+                    sessionStore: sessionStore,
+                    onDone: {
+                        step = .complete
+                        onComplete()
+                    }
                 )
 
             case .complete:
@@ -166,8 +187,12 @@ public struct OnboardingFlow: View {
         do {
             try await authService.verify(code: code)
             isSubmitting = false
-            step = .complete
-            onComplete()
+            // Fresh verify always lands on ProfileSetup — the user
+            // picks a username + optional displayName/bio before
+            // reaching the main scaffold. Skip option marks the
+            // session flag so subsequent launches bypass this step
+            // entirely.
+            step = .profileSetup
         } catch let error as AppError {
             isSubmitting = false
             otpError = error.errorDescription ?? "Code incorrect"
@@ -175,5 +200,19 @@ public struct OnboardingFlow: View {
             isSubmitting = false
             otpError = error.localizedDescription
         }
+    }
+
+    /// Routing matrix consumed by the splash callback — mirrors
+    /// `SessionGateViewModel.kt` on Android.
+    ///
+    ///   - session == nil                 → .welcome (fresh install / signed out)
+    ///   - !session.isVerified            → .welcome (in-flight register)
+    ///   - !session.profileSetupDone      → .profileSetup
+    ///   - else                           → .complete
+    private func nextStepAfterSplash() -> Step {
+        guard let session = sessionStore.current, session.isVerified else {
+            return .welcome
+        }
+        return session.profileSetupDone ? .complete : .profileSetup
     }
 }
