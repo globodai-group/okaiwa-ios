@@ -17,6 +17,7 @@ public struct NewMessageView: View {
     var onCreateChannel: () -> Void = {}
 
     @State private var query: String = ""
+    @State private var discoveryModel = DiscoverySearchModel()
 
     // The mock repo is a singleton for now — the real view will inject
     // a ViewModel that observes `ChatRepository.observeConversations()`.
@@ -40,6 +41,17 @@ public struct NewMessageView: View {
         VStack(spacing: 0) {
             topBar
             searchField
+            // Live discovery — when the user types a username (3+ chars),
+            // the backend's GET /v1/discovery/username/:username is hit
+            // after a 300 ms idle window. Match → "Démarrer" pill row.
+            // No match → an explicit "Aucun utilisateur" line so the
+            // user knows to invite the contact instead.
+            DiscoveryResultRow(
+                state: discoveryModel.state,
+                onStartConversation: { user in
+                    onStartConversation(user.accountId)
+                }
+            )
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     UtilityActionRow(
@@ -114,6 +126,9 @@ public struct NewMessageView: View {
             TextField("", text: $query, prompt: Text("Rechercher des contacts").foregroundStyle(OkaiwaColors.placeholder))
                 .foregroundStyle(OkaiwaColors.white)
                 .tint(OkaiwaColors.lime)
+                .onChange(of: query) { _, newValue in
+                    discoveryModel.onQueryChanged(newValue)
+                }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -232,6 +247,77 @@ public struct NewMessageView: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+private struct DiscoveryResultRow: View {
+    let state: DiscoverySearchModel.State
+    let onStartConversation: (DiscoveredUser) -> Void
+
+    var body: some View {
+        switch state {
+        case .idle:
+            EmptyView()
+
+        case .searching:
+            Text("Recherche…")
+                .font(.system(size: 12))
+                .foregroundStyle(OkaiwaColors.muted)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+        case .notFound:
+            Text("Aucun utilisateur Okaiwa pour cet identifiant.")
+                .font(.system(size: 13))
+                .foregroundStyle(OkaiwaColors.muted)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+        case .error(let message):
+            Text(message)
+                .font(.system(size: 13))
+                .foregroundStyle(OkaiwaColors.error)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+        case .found(let user):
+            Button {
+                onStartConversation(user)
+            } label: {
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(OkaiwaColors.lime.opacity(0.18))
+                        .frame(width: 40, height: 40)
+                        .overlay(
+                            Text(String(user.username?.first.map { String($0).uppercased() } ?? "@"))
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(OkaiwaColors.lime)
+                        )
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(user.profile?.displayName ?? user.username ?? "")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(OkaiwaColors.white)
+                        Text("@\(user.username ?? "")")
+                            .font(.system(size: 12))
+                            .foregroundStyle(OkaiwaColors.muted)
+                    }
+                    Spacer()
+                    Text("Démarrer")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(OkaiwaColors.black)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(OkaiwaColors.lime, in: Capsule())
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
