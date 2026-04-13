@@ -58,7 +58,10 @@ public final class RemoteProfileRepository: ObservableObject {
 
         do {
             let response = try await client.getMyProfile(accessToken: session.accessToken)
-            profile = response.toUserProfile()
+            // Phone isn't returned by /profile/me (server only stores
+            // the hash) — pull it from the device-local session blob
+            // so the UI doesn't render an empty Mobile field.
+            profile = response.toUserProfile(phoneE164: session.phoneE164)
         } catch {
             // Silent on transport failure — the next user-initiated
             // refresh (tab re-selection, mutation) will retry. Don't
@@ -69,18 +72,14 @@ public final class RemoteProfileRepository: ObservableObject {
 }
 
 private extension MyProfileResponse {
-    func toUserProfile() -> UserProfile {
+    func toUserProfile(phoneE164: String) -> UserProfile {
         UserProfile(
             userId: accountId,
             displayName: profile?.displayName?.isEmpty == false
                 ? profile!.displayName!
                 : (username ?? "Compte Okaiwa"),
             username: username.map { "@\($0)" } ?? "@—",
-            // The phone number isn't returned by /profile/me — the
-            // server only stores its hash. The UI shows an empty
-            // placeholder until we surface the formatted local value
-            // from a separate device-local store.
-            phoneNumberE164: "",
+            phoneNumberE164: phoneE164,
             bio: profile?.bio,
             avatarUrl: profile?.avatarUrl,
             isVerified: false,

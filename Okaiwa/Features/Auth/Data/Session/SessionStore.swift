@@ -46,6 +46,12 @@ final class SessionStore {
         /// …) has been completed. Used by the navigation layer to
         /// decide between ProfileSetup and Main on cold start.
         var profileSetupDone: Bool = false
+        /// The user's own E.164 phone number, persisted on disk
+        /// (Keychain) so the Profile tab can display it without
+        /// round-tripping through the server (which only stores the
+        /// hash). Same trust boundary as the access token — disk read
+        /// requires Keychain unlock anyway.
+        var phoneE164: String = ""
 
         var isFresh: Bool {
             Int64(Date().timeIntervalSince1970) < expiresAtEpochSeconds
@@ -86,7 +92,8 @@ final class SessionStore {
             expiresAtEpochSeconds: session.expiresAtEpochSeconds,
             deviceId: session.deviceId,
             deviceToken: session.deviceToken,
-            profileSetupDone: session.profileSetupDone
+            profileSetupDone: session.profileSetupDone,
+            phoneE164: session.phoneE164
         )
         do {
             let data = try JSONEncoder().encode(persisted)
@@ -150,7 +157,8 @@ final class SessionStore {
             expiresAtEpochSeconds: persisted.expiresAtEpochSeconds,
             deviceId: persisted.deviceId,
             deviceToken: persisted.deviceToken,
-            profileSetupDone: persisted.profileSetupDone
+            profileSetupDone: persisted.profileSetupDone,
+            phoneE164: persisted.phoneE164
         )
     }
 }
@@ -167,4 +175,5 @@ private struct PersistedSession: Codable {
     let deviceId: String
     let deviceToken: String
     let profileSetupDone: Bool
+    var phoneE164: String = ""
 }

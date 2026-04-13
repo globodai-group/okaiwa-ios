@@ -68,10 +68,11 @@ final class IdentityAuthService {
                 expiresAtEpochSeconds: 0,
                 deviceId: response.deviceId ?? "",
                 deviceToken: "",
-                profileSetupDone: false
+                profileSetupDone: false,
+                phoneE164: phoneE164
             )
         )
-        logger.info("Registered — account \(response.accountId.prefix(8), privacy: .public)")
+        logger.info("Registered — account \(response.accountId.prefix(8), privacy: .private)")
     }
 
     /// Login path — symmetric to [register] but only succeeds when
@@ -89,10 +90,14 @@ final class IdentityAuthService {
                 phoneHash: phoneHash,
                 accessToken: "",
                 refreshToken: "",
-                expiresAtEpochSeconds: 0
+                expiresAtEpochSeconds: 0,
+                deviceId: "",
+                deviceToken: "",
+                profileSetupDone: false,
+                phoneE164: phoneE164
             )
         )
-        logger.info("Login initiated — account \(response.accountId.prefix(8), privacy: .public)")
+        logger.info("Login initiated — account \(response.accountId.prefix(8), privacy: .private)")
     }
 
     func verify(code: String) async throws {
@@ -113,10 +118,11 @@ final class IdentityAuthService {
                 expiresAtEpochSeconds: Int64(Date().timeIntervalSince1970) + Int64(response.expiresIn),
                 deviceId: response.deviceId ?? pending.deviceId,
                 deviceToken: response.deviceToken ?? "",
-                profileSetupDone: pending.profileSetupDone
+                profileSetupDone: pending.profileSetupDone,
+                phoneE164: pending.phoneE164
             )
         )
-        logger.info("Verified — account \(pending.accountId.prefix(8), privacy: .public)")
+        logger.info("Verified — account \(pending.accountId.prefix(8), privacy: .private)")
     }
 
     func refresh() async throws {
@@ -140,7 +146,8 @@ final class IdentityAuthService {
                 // MAX_TOKEN_AGE_SECONDS). Keep the existing one.
                 deviceId: response.deviceId ?? pending.deviceId,
                 deviceToken: response.deviceToken ?? pending.deviceToken,
-                profileSetupDone: pending.profileSetupDone
+                profileSetupDone: pending.profileSetupDone,
+                phoneE164: pending.phoneE164
             )
         )
     }
