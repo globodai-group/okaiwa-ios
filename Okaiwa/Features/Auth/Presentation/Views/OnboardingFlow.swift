@@ -44,6 +44,7 @@ public struct OnboardingFlow: View {
     // never fires.
     @State private var sessionStore = SessionStore.shared
     private let authService: IdentityAuthService
+    private let profileRepository: RemoteProfileRepository
 
     let onComplete: () -> Void
 
@@ -52,6 +53,7 @@ public struct OnboardingFlow: View {
         let sessionStore = SessionStore.shared
         self._sessionStore = State(initialValue: sessionStore)
         self.authService = IdentityAuthService(sessionStore: sessionStore)
+        self.profileRepository = RemoteProfileRepository.shared
     }
 
     public var body: some View {
@@ -62,9 +64,16 @@ public struct OnboardingFlow: View {
                 // entry route reflects whether the user is already
                 // authenticated. Same routing matrix as Android's
                 // SessionGateViewModel — single source of truth here.
+                //
+                // When the local `profileSetupDone` flag is false we
+                // ALSO ask the server whether the account already has
+                // a username (reinstall path). Without this check a
+                // user whose local flag was wiped would be pushed
+                // through ProfileSetup and hit HTTP 409 "username
+                // taken" on the upcoming PUT — the bug this bootstrap
+                // closes (mirror of okaiwa-android commit f650521).
                 SplashView {
-                    step = nextStepAfterSplash()
-                    if step == .complete { onComplete() }
+                    Task { await resolveSplashRoute() }
                 }
 
             case .welcome:
@@ -203,13 +212,28 @@ public struct OnboardingFlow: View {
 
         do {
             try await authService.verify(code: code)
-            isSubmitting = false
-            // Fresh verify always lands on ProfileSetup — the user
-            // picks a username + optional displayName/bio before
-            // reaching the main scaffold. Skip option marks the
-            // session flag so subsequent launches bypass this step
-            // entirely.
-            step = .profileSetup
+
+            // Server is the source of truth: if the account already
+            // has a username, we MUST NOT push the user back through
+            // ProfileSetup — they'd retype the same handle and hit a
+            // 409. Pre-existing accounts go straight to Main (mirror
+            // of okaiwa-android commit 14bf000).
+            switch await profileRepository.fetchUsernameForBootstrap() {
+            case .existing:
+                sessionStore.markProfileSetupDone()
+                isSubmitting = false
+                step = .complete
+                onComplete()
+            case .newUser:
+                isSubmitting = false
+                step = .profileSetup
+            case .authFailure:
+                isSubmitting = false
+                otpError = L10n.string("otp_session_expired")
+            case .transientFailure:
+                isSubmitting = false
+                otpError = L10n.string("otp_network_error")
+            }
         } catch let error as AppError {
             isSubmitting = false
             otpError = error.errorDescription ?? L10n.string("otp_generic_error")
@@ -219,17 +243,40 @@ public struct OnboardingFlow: View {
         }
     }
 
-    /// Routing matrix consumed by the splash callback — mirrors
-    /// `SessionGateViewModel.kt` on Android.
+    /// Splash routing matrix — mirrors `SessionGateViewModel.kt` on
+    /// Android, including the async server check that closes the
+    /// reinstall bug (local flag says "needs ProfileSetup" but the
+    /// server already has the username — go straight to Main).
     ///
-    ///   - session == nil                 → .welcome (fresh install / signed out)
-    ///   - !session.isVerified            → .welcome (in-flight register)
-    ///   - !session.profileSetupDone      → .profileSetup
-    ///   - else                           → .complete
-    private func nextStepAfterSplash() -> Step {
+    ///   - session == nil                  → .welcome
+    ///   - !session.isVerified             → .welcome
+    ///   - session.profileSetupDone        → .complete
+    ///   - else, ask the server:
+    ///       - .existing → markProfileSetupDone + .complete
+    ///       - .newUser → .profileSetup
+    ///       - .authFailure → .welcome (clean re-auth)
+    ///       - .transientFailure → .profileSetup (legacy fallback)
+    private func resolveSplashRoute() async {
         guard let session = sessionStore.current, session.isVerified else {
-            return .welcome
+            step = .welcome
+            return
         }
-        return session.profileSetupDone ? .complete : .profileSetup
+        if session.profileSetupDone {
+            step = .complete
+            onComplete()
+            return
+        }
+        switch await profileRepository.fetchUsernameForBootstrap() {
+        case .existing:
+            sessionStore.markProfileSetupDone()
+            step = .complete
+            onComplete()
+        case .newUser:
+            step = .profileSetup
+        case .authFailure:
+            step = .welcome
+        case .transientFailure:
+            step = .profileSetup
+        }
     }
 }

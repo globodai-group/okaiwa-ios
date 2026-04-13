@@ -85,6 +85,75 @@ public final class RemoteProfileRepository: ObservableObject {
             logger.warning("Failed to refresh profile — keeping cached state")
         }
     }
+
+    /// Typed result of the post-verify (and splash-time) profile
+    /// bootstrap. Mirrors `ProfileBootstrap` on Android.
+    ///
+    ///   - `existing(username)` — server returned a non-blank username,
+    ///     the user goes straight to Main. Cache is populated as a
+    ///     side-effect.
+    ///   - `newUser` — server returned 404 or 200 with null/blank
+    ///     username, the user goes through ProfileSetup.
+    ///   - `authFailure` — token was rejected (401/403). Block
+    ///     navigation and surface a re-auth path.
+    ///   - `transientFailure` — network / 5xx / parse error. Block
+    ///     navigation with a retry message.
+    ///
+    /// Typed result is load-bearing: folding 401 / network failure
+    /// into the same "no username" bucket that 404 uses would push
+    /// the user through ProfileSetup on a transient failure and
+    /// immediately hit HTTP 409 on the username PUT — exactly the bug
+    /// this bootstrap exists to prevent (mirror of okaiwa-android
+    /// commit 14bf000).
+    public enum ProfileBootstrap: Equatable {
+        case existing(username: String)
+        case newUser
+        case authFailure
+        case transientFailure
+    }
+
+    /// Eager fetch used by:
+    ///   - OnboardingFlow after a successful `/v1/auth/verify` (decides
+    ///     whether to land on `.complete` or `.profileSetup`),
+    ///   - OnboardingFlow at splash time when the local flag is false
+    ///     (covers reinstall where the device-local flag is stale but
+    ///     the server already has the username).
+    ///
+    /// The cache is populated as a side-effect so the Profile tab
+    /// opens pre-hydrated.
+    public func fetchUsernameForBootstrap() async -> ProfileBootstrap {
+        guard let session = sessionStore.current,
+              !session.accessToken.isEmpty else {
+            return .authFailure
+        }
+
+        let response: MyProfileResponse
+        do {
+            response = try await client.getMyProfile(accessToken: session.accessToken)
+        } catch AppError.sessionExpired {
+            return .authFailure
+        } catch ProfileClientError.notFound {
+            return .newUser
+        } catch {
+            return .transientFailure
+        }
+
+        // Cross-check the accountId echoed by the server against the
+        // one we derived from the token at verify time. If they don't
+        // match (proxy mis-routing, replay, compromised backend),
+        // propagating someone else's profile into the local cache
+        // would be a cross-account leak.
+        if !session.accountId.isEmpty && response.accountId != session.accountId {
+            return .transientFailure
+        }
+
+        profile = response.toUserProfile(phoneE164: session.phoneE164)
+        let handle = response.username?.trimmingCharacters(in: .whitespaces)
+        if let handle, !handle.isEmpty {
+            return .existing(username: handle)
+        }
+        return .newUser
+    }
 }
 
 private extension MyProfileResponse {
