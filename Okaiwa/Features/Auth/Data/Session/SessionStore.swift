@@ -1,0 +1,97 @@
+import Foundation
+import os
+
+/// Persistent home for the identity service session — mirrors the
+/// Android `SessionStore.kt`.
+///
+/// Tokens land in the iOS Keychain with `kSecAttrAccessibleWhenUnlocked-
+/// ThisDeviceOnly` (set inside `KeychainManager`), so they are:
+/// - readable only after device unlock,
+/// - excluded from iCloud + local backups,
+/// - not migrated to a new device on restore.
+///
+/// The in-memory `@Observable` snapshot mirrors disk so SwiftUI views
+/// can observe sign-in / sign-out without polling the Keychain.
+@Observable
+@MainActor
+final class SessionStore {
+    struct Session: Equatable, Sendable {
+        let accountId: String
+        let phoneHash: String
+        let accessToken: String
+        let refreshToken: String
+        let expiresAtEpochSeconds: Int64
+
+        var isFresh: Bool {
+            Int64(Date().timeIntervalSince1970) < expiresAtEpochSeconds
+        }
+    }
+
+    private(set) var current: Session?
+
+    private let keychain: KeychainManager
+    private let logger = Logger(subsystem: "io.okaiwa.app", category: "SessionStore")
+
+    private enum Key {
+        static let accessToken = "identity.session.access_token"
+        static let refreshToken = "identity.session.refresh_token"
+        static let accountId = "identity.session.account_id"
+        static let phoneHash = "identity.session.phone_hash"
+        static let expiresAt = "identity.session.expires_at"
+    }
+
+    init(keychain: KeychainManager = KeychainManager()) {
+        self.keychain = keychain
+        self.current = Self.loadFromDisk(keychain)
+    }
+
+    // MARK: - Mutations
+
+    func save(_ session: Session) {
+        do {
+            try keychain.saveString(session.accountId, forKey: Key.accountId)
+            try keychain.saveString(session.phoneHash, forKey: Key.phoneHash)
+            try keychain.saveString(session.accessToken, forKey: Key.accessToken)
+            try keychain.saveString(session.refreshToken, forKey: Key.refreshToken)
+            try keychain.saveString(String(session.expiresAtEpochSeconds), forKey: Key.expiresAt)
+            current = session
+            logger.info("Session saved — account \(session.accountId.prefix(8), privacy: .public)")
+        } catch {
+            logger.error("Session persist failure: \(error.localizedDescription)")
+        }
+    }
+
+    func clear() {
+        for key in [Key.accessToken, Key.refreshToken, Key.accountId, Key.phoneHash, Key.expiresAt] {
+            try? keychain.delete(forKey: key)
+        }
+        current = nil
+        logger.info("Session cleared")
+    }
+
+    // MARK: - Private
+
+    private static func loadFromDisk(_ keychain: KeychainManager) -> Session? {
+        guard
+            let accountId = try? keychain.loadString(forKey: Key.accountId),
+            let phoneHash = try? keychain.loadString(forKey: Key.phoneHash),
+            let accessToken = try? keychain.loadString(forKey: Key.accessToken),
+            let refreshToken = try? keychain.loadString(forKey: Key.refreshToken),
+            let expiresRaw = try? keychain.loadString(forKey: Key.expiresAt),
+            let accountIdValue = accountId,
+            let phoneHashValue = phoneHash,
+            let accessTokenValue = accessToken,
+            let refreshTokenValue = refreshToken,
+            let expiresValue = expiresRaw,
+            let expiresAt = Int64(expiresValue)
+        else { return nil }
+
+        return Session(
+            accountId: accountIdValue,
+            phoneHash: phoneHashValue,
+            accessToken: accessTokenValue,
+            refreshToken: refreshTokenValue,
+            expiresAtEpochSeconds: expiresAt
+        )
+    }
+}

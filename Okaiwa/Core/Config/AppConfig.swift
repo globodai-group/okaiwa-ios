@@ -48,12 +48,17 @@ struct AppConfig: Sendable {
 
     // MARK: - Predefined Configurations
 
+    // Live identity service deployed behind okaiwa-api.globodai.group
+    // — see okaiwa-server/identity. Same URL is used by the Android
+    // twin via AppConfig.environment.apiBaseUrl. Points to the shared
+    // dev/staging endpoint while the rec + prod environments are still
+    // on their placeholder hostnames below.
     static let dev = AppConfig(
         environment: .dev,
-        apiBaseURL: URL(string: "https://api.dev.okaiwa.io/v1")!,
-        webSocketURL: URL(string: "wss://ws.dev.okaiwa.io")!,
-        identityServiceURL: URL(string: "https://identity.dev.okaiwa.io/v1")!,
-        cdnBaseURL: URL(string: "https://cdn.dev.okaiwa.io")!,
+        apiBaseURL: URL(string: "https://okaiwa-api.globodai.group/v1")!,
+        webSocketURL: URL(string: "wss://okaiwa-api.globodai.group/v1/ws")!,
+        identityServiceURL: URL(string: "https://okaiwa-api.globodai.group/v1")!,
+        cdnBaseURL: URL(string: "https://okaiwa-api.globodai.group")!,
         enableSealedSender: true,
         enableWallet: true,
         enableCalls: false,

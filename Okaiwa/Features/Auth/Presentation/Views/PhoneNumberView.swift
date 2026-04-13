@@ -17,6 +17,7 @@ public struct PhoneNumberView: View {
     let onPickCountry: () -> Void
     let onContinue: (Country, String, Bool) -> Void
     let isLoading: Bool
+    let errorMessage: String?
 
     @State private var phoneDigits: String = ""
     @State private var syncContacts: Bool = true
@@ -28,7 +29,8 @@ public struct PhoneNumberView: View {
         onBack: @escaping () -> Void,
         onPickCountry: @escaping () -> Void,
         onContinue: @escaping (Country, String, Bool) -> Void,
-        isLoading: Bool = false
+        isLoading: Bool = false,
+        errorMessage: String? = nil
     ) {
         self.mode = mode
         self._selectedCountry = selectedCountry
@@ -36,6 +38,7 @@ public struct PhoneNumberView: View {
         self.onPickCountry = onPickCountry
         self.onContinue = onContinue
         self.isLoading = isLoading
+        self.errorMessage = errorMessage
     }
 
     private var isSubmittable: Bool { phoneDigits.count >= 6 && !isLoading }
@@ -86,6 +89,14 @@ public struct PhoneNumberView: View {
                         isFocused: $phoneFocused
                     )
                     SyncContactsToggle(checked: $syncContacts)
+
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.system(size: 13))
+                            .foregroundStyle(OkaiwaColors.error)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                    }
                 }
                 .padding(.horizontal, 24)
 

@@ -7,6 +7,13 @@ import SwiftUI
 ///
 /// The country picker is presented as a modal sheet over the phone entry
 /// screen, matching the Android bottom-sheet feel.
+///
+/// Both the PhoneNumber step (POST /v1/auth/register) and the OTP step
+/// (POST /v1/auth/verify) talk to the deployed identity service via
+/// [IdentityAuthService]. The session store is shared between the two
+/// steps so the verify call can re-submit the phone hash stashed at
+/// register time without asking for the number again.
+@MainActor
 public struct OnboardingFlow: View {
     public enum Step: Equatable, Hashable {
         case splash
@@ -19,10 +26,20 @@ public struct OnboardingFlow: View {
     @State private var step: Step = .splash
     @State private var selectedCountry: Country = Countries.default
     @State private var showCountryPicker: Bool = false
+    @State private var isSubmitting: Bool = false
+    @State private var phoneError: String?
+    @State private var otpError: String?
+
+    @State private var sessionStore = SessionStore()
+    private let authService: IdentityAuthService
+
     let onComplete: () -> Void
 
     public init(onComplete: @escaping () -> Void) {
         self.onComplete = onComplete
+        let sessionStore = SessionStore()
+        self._sessionStore = State(initialValue: sessionStore)
+        self.authService = IdentityAuthService(sessionStore: sessionStore)
     }
 
     public var body: some View {
@@ -45,21 +62,24 @@ public struct OnboardingFlow: View {
                     onPickCountry: { showCountryPicker = true },
                     onContinue: { country, nationalNumber, _ in
                         let full = "\(country.dialCode)\(nationalNumber)"
-                        step = .otpVerification(phoneDisplay: full)
-                    }
+                        Task { await submitPhone(full) }
+                    },
+                    isLoading: isSubmitting,
+                    errorMessage: phoneError
                 )
 
             case .otpVerification(let phoneDisplay):
                 OtpVerificationView(
                     phoneNumberDisplay: phoneDisplay,
                     onBack: { step = .phoneEntry(mode: .register) },
-                    onSubmit: { _ in
-                        step = .complete
-                        onComplete()
+                    onSubmit: { code in
+                        Task { await submitOtp(code) }
                     },
                     onResend: {
                         // TODO: call authRepository.requestOtp again
-                    }
+                    },
+                    isLoading: isSubmitting,
+                    errorMessage: otpError
                 )
 
             case .complete:
@@ -98,6 +118,45 @@ public struct OnboardingFlow: View {
             )
             .presentationBackground(OkaiwaColors.black)
             .presentationDragIndicator(.visible)
+        }
+    }
+
+    // MARK: - Identity service calls
+
+    private func submitPhone(_ phoneE164: String) async {
+        guard !isSubmitting else { return }
+        isSubmitting = true
+        phoneError = nil
+
+        do {
+            try await authService.register(phoneE164: phoneE164)
+            isSubmitting = false
+            step = .otpVerification(phoneDisplay: phoneE164)
+        } catch let error as AppError {
+            isSubmitting = false
+            phoneError = error.errorDescription ?? "Échec de l'inscription"
+        } catch {
+            isSubmitting = false
+            phoneError = error.localizedDescription
+        }
+    }
+
+    private func submitOtp(_ code: String) async {
+        guard !isSubmitting else { return }
+        isSubmitting = true
+        otpError = nil
+
+        do {
+            try await authService.verify(code: code)
+            isSubmitting = false
+            step = .complete
+            onComplete()
+        } catch let error as AppError {
+            isSubmitting = false
+            otpError = error.errorDescription ?? "Code incorrect"
+        } catch {
+            isSubmitting = false
+            otpError = error.localizedDescription
         }
     }
 }
