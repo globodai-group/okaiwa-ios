@@ -6,8 +6,9 @@ import Observation
 public enum WalletOnboardingStep {
     case method
     case securityTips
-    case seedPhraseDisplay
-    case seedPhraseVerify
+    case seedPhraseDisplay   // seed flow only
+    case seedPhraseVerify    // seed flow only
+    case passkeyCreation     // passkey flow only — biometric + cloud sync
     case nameWallet
     case ready
 }
@@ -34,13 +35,25 @@ public final class WalletOnboardingViewModel {
     }
 
     public func onSecurityTipsAccepted() {
-        mnemonic = MockMnemonicGenerator.generate24()
-        verifyIndices = [
-            Int.random(in: 2...7),
-            Int.random(in: 10...15),
-            Int.random(in: 18...23),
-        ]
-        step = .seedPhraseDisplay
+        switch method {
+        case .seedPhrase:
+            mnemonic = MockMnemonicGenerator.generate24()
+            verifyIndices = [
+                Int.random(in: 2...7),
+                Int.random(in: 10...15),
+                Int.random(in: 18...23),
+            ]
+            step = .seedPhraseDisplay
+        case .passkey:
+            // Skips seed display + verify — the private key lives in
+            // Secure Enclave and the user authenticates with biometrics.
+            step = .passkeyCreation
+        }
+    }
+
+    /// Called by the passkey step after the system biometric prompt.
+    public func onPasskeyCreated() {
+        step = .nameWallet
     }
 
     public func onSeedPhraseAcknowledged() {
@@ -69,7 +82,9 @@ public final class WalletOnboardingViewModel {
         case .securityTips:       prev = .method
         case .seedPhraseDisplay:  prev = .securityTips
         case .seedPhraseVerify:   prev = .seedPhraseDisplay
-        case .nameWallet:         prev = .seedPhraseVerify
+        case .passkeyCreation:    prev = .securityTips
+        case .nameWallet:
+            prev = (method == .seedPhrase) ? .seedPhraseVerify : .passkeyCreation
         case .ready:              prev = nil
         }
         if let prev { step = prev; return true }

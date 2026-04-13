@@ -35,6 +35,7 @@ public struct WalletOnboardingFlow: View {
                     )
                 case .securityTips:
                     SecurityTipsStep(
+                        method: viewModel.method,
                         onAccept: viewModel.onSecurityTipsAccepted,
                         onBack: { if !viewModel.previousStep() { onCancel() } }
                     )
@@ -51,6 +52,11 @@ public struct WalletOnboardingFlow: View {
                         mnemonic: viewModel.mnemonic,
                         verifyIndices: viewModel.verifyIndices,
                         onSuccess: viewModel.onVerificationSuccess,
+                        onBack: { viewModel.previousStep() }
+                    )
+                case .passkeyCreation:
+                    PasskeyCreationStep(
+                        onCreated: viewModel.onPasskeyCreated,
                         onBack: { viewModel.previousStep() }
                     )
                 case .nameWallet:
@@ -235,15 +241,27 @@ private struct MethodCard: View {
 // MARK: - Step 2 — Security tips
 
 private struct SecurityTipsStep: View {
+    let method: WalletCreationMethod
     let onAccept: () -> Void
     let onBack: () -> Void
 
     @State private var checks: [Bool] = [false, false, false]
-    private let tips = [
-        "La phrase secrète (24 mots) est la SEULE manière de récupérer mon portefeuille. Si je la perds, mes fonds sont perdus à jamais.",
-        "Je dois la conserver hors ligne — papier, coffre-fort, ou gestionnaire de mots de passe — et ne JAMAIS la partager.",
-        "Okaiwa n'a aucun moyen de récupérer ma phrase secrète à ma place. La sécurité dépend entièrement de moi.",
-    ]
+    private var tips: [String] {
+        switch method {
+        case .seedPhrase:
+            return [
+                "La phrase secrète (24 mots) est la SEULE manière de récupérer mon portefeuille. Si je la perds, mes fonds sont perdus à jamais.",
+                "Je dois la conserver hors ligne — papier, coffre-fort, ou gestionnaire de mots de passe — et ne JAMAIS la partager.",
+                "Okaiwa n'a aucun moyen de récupérer ma phrase secrète à ma place. La sécurité dépend entièrement de moi.",
+            ]
+        case .passkey:
+            return [
+                "La clé privée est générée dans la Secure Enclave de mon iPhone. Elle ne quitte jamais l'appareil en clair et ne sera accessible qu'avec mon empreinte ou Face ID.",
+                "La sauvegarde chiffrée est synchronisée via iCloud Keychain. Je peux donc récupérer mon wallet sur un nouveau téléphone en m'authentifiant avec mon Apple ID.",
+                "Si je supprime la clé d'accès ET que je perds l'accès à mon Apple ID, je perdrai mes fonds. Okaiwa n'a aucun backup de secours.",
+            ]
+        }
+    }
 
     var allChecked: Bool { checks.allSatisfy { $0 } }
 
@@ -520,6 +538,113 @@ private struct VerifyChallenge {
     let position: Int
     let correctWord: String
     let options: [String]
+}
+
+// MARK: - Step 4b — Passkey creation (passkey branch only)
+
+private struct PasskeyCreationStep: View {
+    let onCreated: () -> Void
+    let onBack: () -> Void
+
+    @State private var isCreating = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            TopBar(title: "Clé d'accès", onBack: onBack)
+
+            VStack(spacing: 0) {
+                Spacer().frame(height: 24)
+
+                // Secure Enclave medallion — the visual stand-in for the
+                // platform biometric + hardware-keyed signing module.
+                RoundedRectangle(cornerRadius: 32, style: .continuous)
+                    .fill(OkaiwaColors.lime.opacity(0.12))
+                    .frame(width: 112, height: 112)
+                    .overlay(
+                        Image(systemName: "faceid")
+                            .font(.system(size: 52, weight: .regular))
+                            .foregroundStyle(OkaiwaColors.lime)
+                    )
+
+                Spacer().frame(height: 24)
+
+                Text("Créez votre clé d'accès")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(OkaiwaColors.white)
+                    .multilineTextAlignment(.center)
+
+                Spacer().frame(height: 8)
+
+                Text("Votre iPhone va vous demander de confirmer avec Face ID ou Touch ID. La clé privée reste dans la Secure Enclave — Okaiwa ne la voit jamais.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(OkaiwaColors.muted)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(5)
+                    .padding(.horizontal, 24)
+
+                Spacer().frame(height: 24)
+
+                VStack(spacing: 0) {
+                    PasskeyBenefitRow(
+                        title: "Génération matérielle",
+                        subtitle: "Clé signée par la Secure Enclave, non exportable."
+                    )
+                    PasskeyBenefitRow(
+                        title: "Sauvegarde cloud chiffrée",
+                        subtitle: "Sync iCloud Keychain pour la récupération multi-appareil."
+                    )
+                    PasskeyBenefitRow(
+                        title: "Pas de phrase à retenir",
+                        subtitle: "Biométrie suffit — aucun mot de passe ni mnémonique à noter."
+                    )
+                }
+                .padding(.horizontal, 24)
+
+                Spacer()
+            }
+
+            PrimaryButton(
+                label: isCreating ? "Création…" : "Créer avec biométrie",
+                enabled: !isCreating,
+                action: {
+                    isCreating = true
+                    // Real impl: ASAuthorizationPlatformPublicKeyCredentialRegistrationRequest
+                    // through ASAuthorizationController — triggers Face/Touch ID and
+                    // registers a passkey backed by iCloud Keychain.
+                    // Mock: fake delay then continue.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                        onCreated()
+                    }
+                }
+            )
+            .padding(.horizontal, 24)
+            .padding(.vertical, 16)
+        }
+    }
+}
+
+private struct PasskeyBenefitRow: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(OkaiwaColors.lime)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(OkaiwaColors.white)
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(OkaiwaColors.muted)
+                    .lineSpacing(4)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 8)
+    }
 }
 
 // MARK: - Step 5 — Name wallet
