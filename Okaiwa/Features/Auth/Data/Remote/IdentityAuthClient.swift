@@ -19,11 +19,13 @@ actor IdentityAuthClient {
         let register: URL
         let verify: URL
         let refresh: URL
+        let login: URL
 
         init(base: URL) {
             self.register = base.appendingPathComponent("auth/register")
             self.verify = base.appendingPathComponent("auth/verify")
             self.refresh = base.appendingPathComponent("auth/refresh")
+            self.login = base.appendingPathComponent("auth/login")
         }
     }
 
@@ -61,6 +63,42 @@ actor IdentityAuthClient {
 
     func refresh(_ body: RefreshRequest) async throws -> SessionTokenResponse {
         try await send(endpoints.refresh, body: body, endpoint: "refresh")
+    }
+
+    /// Login request — 404 is surfaced as `AuthClientError.accountNotFound`
+    /// so the UI can distinguish "this phone has no account" from other
+    /// failures without sniffing error strings. The backend returns 404
+    /// with body `{"error":"No account for this phone"}`.
+    func login(_ body: LoginRequest) async throws -> LoginResponse {
+        var request = URLRequest(url: endpoints.login)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("Okaiwa-iOS/0.1.0", forHTTPHeaderField: "User-Agent")
+        request.httpBody = try encoder.encode(body)
+
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch {
+            throw AppError.from(error)
+        }
+
+        guard let http = response as? HTTPURLResponse else {
+            throw AppError.invalidResponse(detail: "Non-HTTP response on login")
+        }
+
+        switch http.statusCode {
+        case 200...299:
+            return try decoder.decode(LoginResponse.self, from: data)
+        case 404:
+            throw AuthClientError.accountNotFound
+        case 429:
+            throw AppError.rateLimited(retryAfterSeconds: 30)
+        default:
+            let bodyStr = String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
+            throw AppError.server(statusCode: http.statusCode, message: bodyStr)
+        }
     }
 
     // MARK: - Internals
@@ -139,4 +177,23 @@ struct SessionTokenResponse: Codable {
 
 struct RefreshRequest: Codable {
     let refreshToken: String
+}
+
+/// Body of POST /v1/auth/login.
+struct LoginRequest: Codable {
+    let phoneHash: String
+}
+
+/// 200 body of POST /v1/auth/login — 404 is raised as
+/// `AuthClientError.accountNotFound` and never materializes a struct.
+struct LoginResponse: Codable {
+    let accountId: String
+    let status: String
+}
+
+/// Typed errors the IdentityAuthClient raises when the server signal
+/// deserves explicit UI handling (as opposed to generic transport /
+/// validation failures funneled through AppError).
+enum AuthClientError: Error {
+    case accountNotFound
 }

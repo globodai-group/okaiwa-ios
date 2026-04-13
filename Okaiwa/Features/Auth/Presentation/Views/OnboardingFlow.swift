@@ -28,6 +28,8 @@ public struct OnboardingFlow: View {
     @State private var showCountryPicker: Bool = false
     @State private var isSubmitting: Bool = false
     @State private var phoneError: String?
+    @State private var accountNotFoundForLogin: Bool = false
+    @State private var pendingPhoneE164: String = ""
     @State private var otpError: String?
 
     @State private var sessionStore = SessionStore()
@@ -62,10 +64,16 @@ public struct OnboardingFlow: View {
                     onPickCountry: { showCountryPicker = true },
                     onContinue: { country, nationalNumber, _ in
                         let full = "\(country.dialCode)\(nationalNumber)"
-                        Task { await submitPhone(full) }
+                        pendingPhoneE164 = full
+                        Task { await submitPhone(full, mode: mode) }
                     },
                     isLoading: isSubmitting,
-                    errorMessage: phoneError
+                    errorMessage: phoneError,
+                    accountNotFoundForLogin: accountNotFoundForLogin,
+                    onCreateAccountFromLogin: {
+                        accountNotFoundForLogin = false
+                        Task { await submitPhone(pendingPhoneE164, mode: .register) }
+                    }
                 )
 
             case .otpVerification(let phoneDisplay):
@@ -123,18 +131,27 @@ public struct OnboardingFlow: View {
 
     // MARK: - Identity service calls
 
-    private func submitPhone(_ phoneE164: String) async {
+    private func submitPhone(_ phoneE164: String, mode: PhoneEntryMode) async {
         guard !isSubmitting else { return }
         isSubmitting = true
         phoneError = nil
+        accountNotFoundForLogin = false
 
         do {
-            try await authService.register(phoneE164: phoneE164)
+            switch mode {
+            case .register:
+                try await authService.register(phoneE164: phoneE164)
+            case .login:
+                try await authService.login(phoneE164: phoneE164)
+            }
             isSubmitting = false
             step = .otpVerification(phoneDisplay: phoneE164)
+        } catch AuthClientError.accountNotFound {
+            isSubmitting = false
+            accountNotFoundForLogin = true
         } catch let error as AppError {
             isSubmitting = false
-            phoneError = error.errorDescription ?? "Échec de l'inscription"
+            phoneError = error.errorDescription ?? "Échec de la requête"
         } catch {
             isSubmitting = false
             phoneError = error.localizedDescription

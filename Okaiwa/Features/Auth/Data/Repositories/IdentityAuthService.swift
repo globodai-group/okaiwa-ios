@@ -71,6 +71,27 @@ final class IdentityAuthService {
         logger.info("Registered — account \(response.accountId.prefix(8), privacy: .public)")
     }
 
+    /// Login path — symmetric to [register] but only succeeds when
+    /// the phone is already registered. The 404 is rethrown as
+    /// `AuthClientError.accountNotFound` so the OnboardingFlow can
+    /// flip the UI to a "create account with this number" CTA instead
+    /// of a technical error string.
+    func login(phoneE164: String) async throws {
+        let phoneHash = PhoneHasher.hashE164(phoneE164)
+        let response = try await client.login(LoginRequest(phoneHash: phoneHash))
+
+        sessionStore.save(
+            SessionStore.Session(
+                accountId: response.accountId,
+                phoneHash: phoneHash,
+                accessToken: "",
+                refreshToken: "",
+                expiresAtEpochSeconds: 0
+            )
+        )
+        logger.info("Login initiated — account \(response.accountId.prefix(8), privacy: .public)")
+    }
+
     func verify(code: String) async throws {
         guard let pending = sessionStore.current else {
             throw AppError.sessionExpired

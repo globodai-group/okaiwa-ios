@@ -18,6 +18,12 @@ public struct PhoneNumberView: View {
     let onContinue: (Country, String, Bool) -> Void
     let isLoading: Bool
     let errorMessage: String?
+    /// Login-only surface: when the user typed a phone that has no
+    /// Okaiwa account, the screen shows a friendly French CTA instead
+    /// of a technical error. Tapping it flips the flow to Register
+    /// for the same number without retyping.
+    let accountNotFoundForLogin: Bool
+    let onCreateAccountFromLogin: () -> Void
 
     @State private var phoneDigits: String = ""
     @State private var syncContacts: Bool = true
@@ -30,7 +36,9 @@ public struct PhoneNumberView: View {
         onPickCountry: @escaping () -> Void,
         onContinue: @escaping (Country, String, Bool) -> Void,
         isLoading: Bool = false,
-        errorMessage: String? = nil
+        errorMessage: String? = nil,
+        accountNotFoundForLogin: Bool = false,
+        onCreateAccountFromLogin: @escaping () -> Void = {}
     ) {
         self.mode = mode
         self._selectedCountry = selectedCountry
@@ -39,6 +47,8 @@ public struct PhoneNumberView: View {
         self.onContinue = onContinue
         self.isLoading = isLoading
         self.errorMessage = errorMessage
+        self.accountNotFoundForLogin = accountNotFoundForLogin
+        self.onCreateAccountFromLogin = onCreateAccountFromLogin
     }
 
     private var isSubmittable: Bool { phoneDigits.count >= 6 && !isLoading }
@@ -96,6 +106,39 @@ public struct PhoneNumberView: View {
                             .foregroundStyle(OkaiwaColors.error)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
+                    }
+
+                    if accountNotFoundForLogin {
+                        // Friendly, French-first fallback when Login mode
+                        // hits a 404. Same UX as the Android twin: lime
+                        // accent panel + a primary CTA that flips to
+                        // Register without asking the user to retype.
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Aucun compte Okaiwa avec ce numéro.")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(OkaiwaColors.white)
+                            Text("Vous n'êtes pas encore inscrit. Vous pouvez créer un compte avec ce numéro en un seul geste.")
+                                .font(.system(size: 13))
+                                .foregroundStyle(OkaiwaColors.whiteDim)
+                                .lineSpacing(3)
+                            Button(action: onCreateAccountFromLogin) {
+                                Text("Créer un compte avec ce numéro")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(OkaiwaColors.black)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(OkaiwaColors.lime, in: RoundedRectangle(cornerRadius: 12))
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.top, 4)
+                        }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(OkaiwaColors.lime.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(OkaiwaColors.lime.opacity(0.5), lineWidth: 1)
+                        )
                     }
                 }
                 .padding(.horizontal, 24)
