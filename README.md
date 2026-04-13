@@ -1,6 +1,6 @@
 # Okaiwa for iOS — Secure Messenger & Wallet
 
-[![Build](https://github.com/globodai-group/okaiwa-ios/actions/workflows/build.yml/badge.svg)](https://github.com/globodai-group/okaiwa-ios/actions/workflows/build.yml)
+[![Build](https://github.com/okaiwa/okaiwa-ios/actions/workflows/build.yml/badge.svg)](https://github.com/okaiwa/okaiwa-ios/actions/workflows/build.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Platform](https://img.shields.io/badge/platform-iOS%2017%2B-lightgrey)](https://developer.apple.com/ios/)
 [![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange)](https://swift.org)
@@ -81,7 +81,7 @@ OkaiwaTests/
 
 ```bash
 # Clone with submodules
-git clone --recursive https://github.com/globodai-group/okaiwa-ios.git
+git clone --recursive https://github.com/okaiwa/okaiwa-ios.git
 cd okaiwa-ios
 
 # Resolve SPM dependencies
