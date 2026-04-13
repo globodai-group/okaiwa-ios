@@ -135,6 +135,14 @@ public final class RemoteChatRepository: ObservableObject {
         guard !deviceToken.isEmpty else {
             throw AppError.sessionExpired
         }
+        // senderDeviceId / senderAccountId on the relay envelope are
+        // cross-checked against the deviceToken's embedded deviceId on
+        // the backend (okaiwa-server@dc897f1). Empty values would make
+        // every send return 401 "device mismatch" — surface a clean
+        // local error so the UI can trigger a re-auth.
+        guard !session.deviceId.isEmpty, !session.accountId.isEmpty else {
+            throw AppError.sessionExpired
+        }
 
         guard let conversation = try await conversationDao.findById(conversationId) else {
             throw AppError.invalidResponse(detail: "Conversation \(conversationId) not found")

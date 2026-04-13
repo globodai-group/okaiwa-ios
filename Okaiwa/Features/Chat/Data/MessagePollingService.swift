@@ -39,6 +39,7 @@ public final class MessagePollingService: @unchecked Sendable {
 
     private let conversationDao: ConversationDao
     private let messageDao: MessageDao
+    private let deadLetterDao: DeadLetterDao
     private let relayClient: RelayAPIClient
     private let discoveryClient: DiscoveryAPIClient
     private let sessionProvider: @Sendable () async -> SessionStore.Session?
@@ -62,6 +63,25 @@ public final class MessagePollingService: @unchecked Sendable {
     private var decryptFailureCounts: [String: Int] = [:]
     private let counterQueue = DispatchQueue(label: "io.okaiwa.polling.counters")
 
+    /// Serialises the spoof-defense `findByIdentityKeyExcluding`
+    /// check + `insert` pair in [resolveOrCreateConversation]. Without
+    /// it, two concurrent inbound envelopes from different accountIds
+    /// that claim the same identityKey could both pass the collision
+    /// check before either inserts — letting a hostile relay silently
+    /// mint duplicate sessions for one peer's identity (TOCTOU, P1
+    /// from the cross-platform security review, mirror of Android's
+    /// `resolveMutex`).
+    ///
+    /// Backed by an empty actor so every async call re-enters through
+    /// actor isolation — Swift's runtime guarantees serial execution.
+    private let resolveLock = ResolveLock()
+
+    private actor ResolveLock {
+        func withLock<T: Sendable>(_ op: () async throws -> T) async rethrows -> T {
+            try await op()
+        }
+    }
+
     private var pollingTask: Task<Void, Never>?
 
     public init(
@@ -72,6 +92,7 @@ public final class MessagePollingService: @unchecked Sendable {
     ) {
         self.conversationDao = database.conversationDao
         self.messageDao = database.messageDao
+        self.deadLetterDao = database.deadLetterDao
         self.relayClient = relayClient
         self.discoveryClient = discoveryClient
         if let sessionProvider {
@@ -138,15 +159,15 @@ public final class MessagePollingService: @unchecked Sendable {
                 // Mirror of Android's DuplicateMessageException handling.
                 logger.debug("duplicate envelope — ack + drop")
                 await ackEnvelope(messageId: envelope.messageId, deviceToken: deviceToken)
-                resetFailureCounter(for: envelope.messageId)
+                await resetFailureCounter(for: envelope.messageId)
             } catch {
-                let next = bumpFailureCounter(for: envelope.messageId)
+                let next = await bumpFailureCounter(for: envelope.messageId)
                 if next >= Self.maxDecryptRetries {
                     logger.warning(
                         "envelope dead-lettered after \(next, privacy: .public) attempts — ack + drop"
                     )
                     await ackEnvelope(messageId: envelope.messageId, deviceToken: deviceToken)
-                    resetFailureCounter(for: envelope.messageId)
+                    await resetFailureCounter(for: envelope.messageId)
                 } else {
                     logger.warning(
                         "envelope handle failed (attempt \(next, privacy: .public)/\(Self.maxDecryptRetries, privacy: .public))"
@@ -160,19 +181,25 @@ public final class MessagePollingService: @unchecked Sendable {
         _ envelope: RelayEnvelope,
         deviceToken: String
     ) async throws {
+        // Drop+ack on malformed envelopes — the previous `return` path
+        // left the envelope on the server forever and let a hostile
+        // peer mint unlimited null-sender blobs to flood the inbox
+        // (DoS, shared P0 with Android from the polling security
+        // review).
         guard let senderDeviceId = envelope.senderDeviceId else {
-            logger.warning("envelope missing senderDeviceId — skip")
+            logger.warning("envelope missing senderDeviceId — ack + drop")
+            await ackEnvelope(messageId: envelope.messageId, deviceToken: deviceToken)
             return
         }
         guard let senderAccountId = envelope.senderAccountId else {
-            // Mirror of Android behavior — log and skip. At-least-once
-            // will redeliver once the backend catches up.
-            logger.warning("envelope missing senderAccountId — skip (backend gap)")
+            logger.warning("envelope missing senderAccountId — ack + drop")
+            await ackEnvelope(messageId: envelope.messageId, deviceToken: deviceToken)
             return
         }
 
         guard let ciphertextBytes = Data(base64Encoded: envelope.blob), !ciphertextBytes.isEmpty else {
-            logger.warning("empty/malformed ciphertext — skip")
+            logger.warning("empty/malformed ciphertext — ack + drop")
+            await ackEnvelope(messageId: envelope.messageId, deviceToken: deviceToken)
             return
         }
         // Signal's type byte is the lower nibble of the first byte of
@@ -227,7 +254,8 @@ public final class MessagePollingService: @unchecked Sendable {
             )
 
         default:
-            logger.warning("unknown ciphertext type \(typeByte, privacy: .public) — skip")
+            logger.warning("unknown ciphertext type \(typeByte, privacy: .public) — ack + drop")
+            await ackEnvelope(messageId: envelope.messageId, deviceToken: deviceToken)
             return
         }
 
@@ -238,11 +266,6 @@ public final class MessagePollingService: @unchecked Sendable {
             senderDeviceId: senderDeviceId,
             peerIdentityKeyB64: peerIdentityKeyB64
         )
-        guard !conversationId.isEmpty else {
-            // Whisper first-contact for an unknown peer — impossible
-            // under normal flow. Skipped by `resolveOrCreateConversation`.
-            return
-        }
         let now = Int64(Date().timeIntervalSince1970 * 1000)
 
         try await messageDao.insert(MessageEntity(
@@ -264,7 +287,7 @@ public final class MessagePollingService: @unchecked Sendable {
 
         // Successful decrypt → clear the failure counter so a future
         // unrelated envelope doesn't inherit the wrong count.
-        resetFailureCounter(for: envelope.messageId)
+        await resetFailureCounter(for: envelope.messageId)
         await ackEnvelope(messageId: envelope.messageId, deviceToken: deviceToken)
     }
 
@@ -284,10 +307,30 @@ public final class MessagePollingService: @unchecked Sendable {
     /// Find a conversation for the sender, or create a new one. On
     /// first contact we pin the peer's identityKey extracted from the
     /// PreKeySignalMessage so the next outbound-reply's TOFU check
-    /// has a real value to compare against (was empty string in the
-    /// pre-iteration implementation, which silently accepted any key
-    /// swap — review P0 #2).
+    /// has a real value to compare against.
+    ///
+    /// Throws `AppError.safetyNumberMismatch` when the envelope
+    /// carries an identityKey that contradicts the pinned one, or is
+    /// already bound to a different accountId — either is a strong
+    /// signal of MITM / sender spoofing. The outer poll loop treats
+    /// this as a decrypt failure and the dead-letter counter
+    /// eventually ack+drops the envelope (mirror of Android
+    /// `IdentityChangedException`).
     private func resolveOrCreateConversation(
+        senderAccountId: String,
+        senderDeviceId: String,
+        peerIdentityKeyB64: String?
+    ) async throws -> String {
+        try await resolveLock.withLock {
+            try await self.resolveOrCreateConversationLocked(
+                senderAccountId: senderAccountId,
+                senderDeviceId: senderDeviceId,
+                peerIdentityKeyB64: peerIdentityKeyB64
+            )
+        }
+    }
+
+    private func resolveOrCreateConversationLocked(
         senderAccountId: String,
         senderDeviceId: String,
         peerIdentityKeyB64: String?
@@ -295,25 +338,43 @@ public final class MessagePollingService: @unchecked Sendable {
         if let existing = try await conversationDao.findByPeerAccountId(senderAccountId) {
             // Second + inbound message: the identity key is already
             // pinned. If a fresh PreKeySignalMessage carries a new
-            // identity key, refuse silently — the bubble surfaces a
-            // "safety number changed" error once that UI lands.
+            // identity key, refuse — let the envelope dead-letter so
+            // the UI can surface a "safety number changed" error
+            // once it lands.
             if let fresh = peerIdentityKeyB64,
                !existing.peerIdentityKey.isEmpty,
                existing.peerIdentityKey != fresh {
-                logger.warning("peer identity changed — refusing to pin silently")
+                logger.error("peer identity changed for conv \(existing.id, privacy: .private) — refusing")
+                throw AppError.safetyNumberMismatch
             }
             return existing.id
         }
 
-        // First contact from this peer.
-        let conversationId = UUID().uuidString
+        // First contact from this peer. WHISPER for a brand-new peer
+        // is technically impossible (a Whisper message needs a
+        // pre-existing session), so a null pin is a poison envelope —
+        // let it dead-letter.
         guard let pinned = peerIdentityKeyB64, !pinned.isEmpty else {
-            // WHISPER_TYPE for a brand-new peer is technically
-            // impossible (a Whisper message needs a pre-existing
-            // session). If it happens, log + skip via empty return.
-            logger.warning("WHISPER first-contact for new peer — skip envelope")
-            return ""
+            logger.error("WHISPER first-contact for unknown peer — refusing")
+            throw AppError.safetyNumberMismatch
         }
+
+        // Sender-spoofing defense: if ANOTHER accountId already has
+        // this identity key pinned, a hostile relay is forwarding
+        // someone else's ciphertext under this accountId. Libsignal
+        // would happily decrypt (the ratchet matches the real peer)
+        // and we'd render the message attributed to the wrong
+        // identity. Refuse and dead-letter (mirror of Android spoof
+        // defense).
+        if let collision = try await conversationDao.findByIdentityKeyExcluding(
+            peerIdentityKey: pinned,
+            excludeAccountId: senderAccountId
+        ) {
+            logger.error("identity already bound to \(collision.id, privacy: .private) — spoof")
+            throw AppError.safetyNumberMismatch
+        }
+
+        let conversationId = UUID().uuidString
         let now = Int64(Date().timeIntervalSince1970 * 1000)
         let entity = ConversationEntity(
             id: conversationId,
@@ -352,17 +413,33 @@ public final class MessagePollingService: @unchecked Sendable {
         return conversationId
     }
 
-    // MARK: - Failure counter helpers (thread-safe)
+    // MARK: - Failure counter helpers (persisted in SQLCipher)
 
-    private func bumpFailureCounter(for messageId: String) -> Int {
-        counterQueue.sync {
-            let next = (decryptFailureCounts[messageId] ?? 0) + 1
-            decryptFailureCounts[messageId] = next
-            return next
+    /// Atomic UPSERT-and-read via `DeadLetterDao.bump`. The counter
+    /// survives cold starts now — a hostile relay that waits for the
+    /// app to kill/restart can't reset the counter back to zero and
+    /// loop the same poison envelope indefinitely (P1 from the
+    /// cross-platform polling security review).
+    private func bumpFailureCounter(for messageId: String) async -> Int {
+        do {
+            return try await deadLetterDao.bump(
+                messageId: messageId,
+                now: Int64(Date().timeIntervalSince1970 * 1000)
+            )
+        } catch {
+            // Counter write failed — fall back to in-memory so we
+            // still eventually dead-letter within the current process.
+            logger.warning("dead-letter bump failed: \(type(of: error), privacy: .public)")
+            return counterQueue.sync {
+                let next = (decryptFailureCounts[messageId] ?? 0) + 1
+                decryptFailureCounts[messageId] = next
+                return next
+            }
         }
     }
 
-    private func resetFailureCounter(for messageId: String) {
+    private func resetFailureCounter(for messageId: String) async {
+        try? await deadLetterDao.reset(messageId: messageId)
         counterQueue.sync {
             decryptFailureCounts.removeValue(forKey: messageId)
         }

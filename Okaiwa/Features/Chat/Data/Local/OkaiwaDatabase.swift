@@ -74,6 +74,31 @@ final class OkaiwaDatabase: @unchecked Sendable {
         MessageDao(writer: writer)
     }
 
+    /// Persisted dead-letter counter — see `dead_letter_counts` in
+    /// the v2 migration. Survives cold starts so a hostile relay
+    /// can't reset the counter by crashing the app.
+    var deadLetterDao: DeadLetterDao {
+        DeadLetterDao(writer: writer)
+    }
+
+    /// Wipe every row in every messaging table. Called from
+    /// `IdentityAuthService.signOut` — the next account on the same
+    /// device MUST NOT inherit the previous user's conversations or
+    /// message bodies (cross-account leak P1 from the polling
+    /// security review, mirror of Android `Room.clearAllTables`).
+    ///
+    /// Uses DELETE rather than DROP so the schema stays intact and
+    /// the next login can reuse the connection without re-running the
+    /// migrator. Runs inside a single transaction so a concurrent
+    /// ValueObservation never sees a half-emptied view.
+    func wipeAllMessagingData() throws {
+        try writer.write { db in
+            try db.execute(sql: "DELETE FROM messages")
+            try db.execute(sql: "DELETE FROM conversations")
+            try db.execute(sql: "DELETE FROM dead_letter_counts")
+        }
+    }
+
     // MARK: - Migrations
 
     private static var migrator: DatabaseMigrator {
@@ -118,6 +143,24 @@ final class OkaiwaDatabase: @unchecked Sendable {
                 on: "messages",
                 columns: ["deliveryState"]
             )
+        }
+
+        // v2 — persisted dead-letter counter table.
+        //
+        // The in-memory ConcurrentHashMap on Android and [String:Int]
+        // on iOS reset on every app launch, so a hostile relay could
+        // cycle through MAX_DECRYPT_RETRIES-1 attempts, wait for the
+        // user to kill the app, and loop the same poison envelope
+        // indefinitely (P1 from the cross-platform polling security
+        // review). Persisting the counter inside the already-
+        // encrypted SQLCipher DB means the counter survives cold
+        // starts and the dead-letter ceiling is actually enforced.
+        migrator.registerMigration("v2_dead_letter_counts") { db in
+            try db.create(table: "dead_letter_counts") { t in
+                t.column("messageId", .text).primaryKey()
+                t.column("count", .integer).notNull().defaults(to: 0)
+                t.column("updatedAt", .integer).notNull()
+            }
         }
 
         return migrator

@@ -67,6 +67,26 @@ struct ConversationDao {
         }
     }
 
+    /// Find a conversation pinned to the given identityKey whose
+    /// peerAccountId is NOT the one we're about to create a row for.
+    /// Used by the polling service's spoof-defense branch: a hostile
+    /// relay forwarding Alice's ciphertext under Mallory's accountId
+    /// would decrypt fine (the ratchet matches the real peer) and
+    /// leave Bob with a Mallory-attributed message whose identityKey
+    /// is actually Alice's. Mirror of
+    /// `ConversationDao.findByIdentityKeyExcluding` on Android.
+    func findByIdentityKeyExcluding(
+        peerIdentityKey: String,
+        excludeAccountId: String
+    ) async throws -> ConversationEntity? {
+        try await writer.read { db in
+            try ConversationEntity
+                .filter(ConversationEntity.Columns.peerIdentityKey == peerIdentityKey)
+                .filter(ConversationEntity.Columns.peerAccountId != excludeAccountId)
+                .fetchOne(db)
+        }
+    }
+
     // MARK: - Writes
 
     /// Room's `@Insert(onConflict = OnConflictStrategy.IGNORE)`

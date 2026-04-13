@@ -202,7 +202,39 @@ final class IdentityAuthService {
         )
     }
 
+    /// Full wipe of every on-device artefact bound to the current
+    /// account — closes the cross-account leak P1 flagged in the
+    /// polling security review: without this, a sign-out followed by
+    /// a re-auth with a different phone on the same device would
+    /// inherit the previous user's libsignal identity, established
+    /// Signal sessions, pinned peer identityKeys, conversation rows,
+    /// and decrypted message bodies sitting in the SQLCipher DB.
+    ///
+    /// Order matters — same as `RemoteAuthRepository.wipeDeviceState`
+    /// on Android:
+    ///   1. Clear libsignal persistence (identity, pre-keys,
+    ///      sessions, pinned peer identities).
+    ///   2. Wipe the SQLCipher DB (conversations + messages) by
+    ///      dropping the tables and re-running the migrator.
+    ///   3. Stop the polling service — it holds a MainActor-hopping
+    ///      closure that snapshots SessionStore.current; leaving it
+    ///      running would race with step 4 and could process an
+    ///      inbound envelope against a half-wiped store.
+    ///   4. Clear SessionStore last so the onChange(SessionStore)
+    ///      observer in OnboardingFlow reliably fires AFTER the
+    ///      underlying stores are already cold.
     func signOut() {
+        do {
+            try SignalIdentityPersistence.shared.clear()
+        } catch {
+            logger.error("signal store clear failed: \(error.localizedDescription, privacy: .public)")
+        }
+        do {
+            try OkaiwaDatabase.shared.wipeAllMessagingData()
+        } catch {
+            logger.error("DB wipe failed on signOut: \(error.localizedDescription, privacy: .public)")
+        }
+        MessagePollingService.shared.stop()
         sessionStore.clear()
     }
 }

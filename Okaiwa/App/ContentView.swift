@@ -43,6 +43,13 @@ struct ContentView: View {
 /// Primary navigation after authentication.
 /// Tab bar with: Chats, Contacts, Wallet, Calls, Settings.
 struct MainTabView: View {
+    // ScenePhase observer — stop the relay poll loop as soon as the
+    // scene is backgrounded or inactive. `.onDisappear` is NOT called
+    // on home / app-switcher because the view stays in the hierarchy,
+    // so a poller-on-.task-only setup would keep polling on the lock
+    // screen and drain battery (P0 #7 from the iOS review). Mirrors
+    // Android `MainActivity.onPause → pollingService.stop()`.
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var selectedTab: AppTab = .chats
 
@@ -114,6 +121,16 @@ struct MainTabView: View {
         }
         .onDisappear {
             MessagePollingService.shared.stop()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active:
+                MessagePollingService.shared.start()
+            case .inactive, .background:
+                MessagePollingService.shared.stop()
+            @unknown default:
+                break
+            }
         }
     }
 }
