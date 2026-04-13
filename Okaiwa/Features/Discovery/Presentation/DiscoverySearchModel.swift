@@ -75,6 +75,20 @@ final class DiscoverySearchModel {
         _ user: DiscoveredUser,
         onReady: @escaping (_ conversationId: String) -> Void
     ) {
+        // Block the user-taps-own-handle case up front. libsignal
+        // doesn't model a "note to self" conversation (a single
+        // device trying to encrypt + decrypt against its own
+        // identityKey would hang on its own ratchet advance), and
+        // even if it did, the discovery → sendMessage path would
+        // then 400 at the relay's recipientDeviceId==senderDeviceId
+        // guard. Mirror of Android `DiscoverySearchViewModel`.
+        let selfAccountId = SessionStore.shared.current?.accountId
+        if let selfAccountId, !selfAccountId.isEmpty, selfAccountId == user.accountId {
+            state = .error(
+                "Vous ne pouvez pas démarrer une conversation avec votre propre compte"
+            )
+            return
+        }
         Task { [chatRepository] in
             do {
                 let conversation = try await chatRepository.createConversationFromDiscovery(peer: user)
