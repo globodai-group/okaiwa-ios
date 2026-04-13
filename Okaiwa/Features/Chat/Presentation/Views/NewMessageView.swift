@@ -19,9 +19,12 @@ public struct NewMessageView: View {
     @State private var query: String = ""
     @State private var discoveryModel = DiscoverySearchModel()
 
-    // The mock repo is a singleton for now — the real view will inject
-    // a ViewModel that observes `ChatRepository.observeConversations()`.
-    @ObservedObject private var repo = MockChatRepository.shared
+    // RemoteChatRepository replaces the mock — observes the GRDB/
+    // SQLCipher-backed conversation table via ValueObservation and
+    // publishes into `@Published conversations` so this view re-renders
+    // without polling. Mirror of the MockChatRepository → RemoteChatRepository
+    // swap on Android.
+    @ObservedObject private var repo = RemoteChatRepository.shared
 
     public init(
         onBack: @escaping () -> Void,
@@ -49,7 +52,16 @@ public struct NewMessageView: View {
             DiscoveryResultRow(
                 state: discoveryModel.state,
                 onStartConversation: { user in
-                    onStartConversation(user.accountId)
+                    // Route through the ViewModel so a conversation
+                    // row is persisted (peerDeviceId + identity key +
+                    // registrationId) BEFORE we navigate — mirror of
+                    // the Android routing fix that landed in dc897f1.
+                    // Without this, the ChatView opens with an
+                    // accountId and no peer metadata, and the first
+                    // send throws "Conversation not found".
+                    discoveryModel.startConversation(user) { conversationId in
+                        onStartConversation(conversationId)
+                    }
                 }
             )
             ScrollView {

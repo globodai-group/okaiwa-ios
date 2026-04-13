@@ -118,6 +118,24 @@ final class DependencyContainer: @unchecked Sendable {
         logger.info("Dependency container bootstrapped")
     }
 
+    /// MainActor-isolated resolver for the identity-auth service — the
+    /// service is @MainActor and holds a SessionStore.shared reference
+    /// so the lazy factory in `resolve()` can't materialize it without
+    /// main-actor context. `@MainActor` annotation on the accessor
+    /// lets SwiftUI `.task { }` hops call it cleanly.
+    @MainActor
+    func identityAuthService() -> IdentityAuthService {
+        let key = String(describing: IdentityAuthService.self)
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached = singletons[key] as? IdentityAuthService {
+            return cached
+        }
+        let fresh = IdentityAuthService(sessionStore: SessionStore.shared)
+        singletons[key] = fresh
+        return fresh
+    }
+
     // MARK: - Testing
 
     /// Reset all registrations. For testing only.

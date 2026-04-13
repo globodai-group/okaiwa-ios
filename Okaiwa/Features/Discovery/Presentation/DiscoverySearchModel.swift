@@ -20,10 +20,15 @@ final class DiscoverySearchModel {
     private(set) var state: State = .idle
 
     private let client: DiscoveryAPIClient
+    private let chatRepository: RemoteChatRepository
     private var debounceTask: Task<Void, Never>?
 
-    init(client: DiscoveryAPIClient = DiscoveryAPIClient()) {
+    init(
+        client: DiscoveryAPIClient = DiscoveryAPIClient(),
+        chatRepository: RemoteChatRepository = .shared
+    ) {
         self.client = client
+        self.chatRepository = chatRepository
     }
 
     func onQueryChanged(_ rawQuery: String) {
@@ -59,5 +64,26 @@ final class DiscoverySearchModel {
     func clear() {
         debounceTask?.cancel()
         state = .idle
+    }
+
+    /// Persist a conversation row for the discovery hit and invoke
+    /// `onReady` with the fresh (or pre-existing) conversation id.
+    /// Mirror of `DiscoverySearchViewModel.startConversation` on Android.
+    /// The actual Signal session is established lazily on the first
+    /// send — see `RemoteChatRepository.sendMessage`.
+    func startConversation(
+        _ user: DiscoveredUser,
+        onReady: @escaping (_ conversationId: String) -> Void
+    ) {
+        Task { [chatRepository] in
+            do {
+                let conversation = try await chatRepository.createConversationFromDiscovery(peer: user)
+                onReady(conversation.id)
+            } catch let appError as AppError {
+                self.state = .error(appError.errorDescription ?? "Impossible de démarrer la conversation")
+            } catch {
+                self.state = .error(error.localizedDescription)
+            }
+        }
     }
 }

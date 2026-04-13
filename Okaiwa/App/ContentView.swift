@@ -97,6 +97,24 @@ struct MainTabView: View {
             .tag(AppTab.settings)
         }
         .tint(OkaiwaTheme.Colors.primaryFallback)
+        // Kick the relay poller + pre-key warmup as soon as the user
+        // lands on the authenticated surface. Mirrors the Android
+        // `MainActivity.onResume → pollingService.start()` +
+        // `RemoteAuthRepository.ensurePreKeysUploaded()` fan-out:
+        //   - `ensurePreKeysUploaded` is idempotent (gated by the
+        //     `preKeysUploaded` flag in the Keychain-backed snapshot)
+        //     and re-pushes the kyber for pre-commit users without a
+        //     re-run of /auth/verify (review P0 #5 mirror).
+        //   - `MessagePollingService.start()` launches the 5s poll
+        //     loop; `.onDisappear` stops it so we don't drain battery
+        //     on the lock screen / in app-switcher.
+        .task {
+            await DependencyContainer.shared.identityAuthService().ensurePreKeysUploaded()
+            MessagePollingService.shared.start()
+        }
+        .onDisappear {
+            MessagePollingService.shared.stop()
+        }
     }
 }
 

@@ -21,14 +21,17 @@ import os
 @MainActor
 final class IdentityAuthService {
     private let client: IdentityAuthClient
+    private let keyClient: KeyAPIClient
     private let sessionStore: SessionStore
     private let logger = Logger(subsystem: "io.okaiwa.app", category: "IdentityAuthService")
 
     init(
         client: IdentityAuthClient = IdentityAuthClient(),
+        keyClient: KeyAPIClient = KeyAPIClient(),
         sessionStore: SessionStore
     ) {
         self.client = client
+        self.keyClient = keyClient
         self.sessionStore = sessionStore
     }
 
@@ -123,6 +126,53 @@ final class IdentityAuthService {
             )
         )
         logger.info("Verified — account \(pending.accountId.prefix(8), privacy: .private)")
+
+        // Post-verify pre-key upload. Idempotent — `SignalIdentityKeys
+        // .arePreKeysUploaded()` reads the persisted flag, so we won't
+        // burn the OPK pool on every cold start. Fire-and-flag: a
+        // transient failure leaves the flag unset and the next cold
+        // start (via `ensurePreKeysUploaded()`) picks it up.
+        await uploadPreKeysOnce(accessToken: response.sessionToken)
+    }
+
+    /// App-level warmup hook — call from the root view's `.task`
+    /// (or any scope that runs once per app launch when a session is
+    /// already persisted). Mirror of `RemoteAuthRepository.ensurePreKeysUploaded()`
+    /// on Android. Lets pre-commit users (or anyone whose first
+    /// upload failed transiently) push their kyber + OPK batch
+    /// without having to re-run `/auth/verify`.
+    ///
+    /// Idempotent — gated by `SignalIdentityKeys.arePreKeysUploaded()`,
+    /// so it's free to call eagerly on every cold start.
+    func ensurePreKeysUploaded() async {
+        guard let token = sessionStore.current?.accessToken, !token.isEmpty else { return }
+        await uploadPreKeysOnce(accessToken: token)
+    }
+
+    /// Internal: post the initial pre-key batch to `/v1/keys/prekeys`.
+    /// Idempotent via the `preKeysUploaded` flag in
+    /// `SignalIdentityKeys`' Keychain-backed snapshot.
+    private func uploadPreKeysOnce(accessToken: String) async {
+        if SignalIdentityKeys.arePreKeysUploaded() { return }
+        do {
+            let batch = try SignalIdentityKeys.uploadBatch()
+            let request = UploadPreKeysRequest(
+                preKeys: batch.oneTimePreKeys.map {
+                    PreKeyDto(keyId: $0.keyId, publicKey: $0.publicKey)
+                },
+                signedPreKey: batch.signedPreKey,
+                kyberPreKey: batch.kyberPreKey
+            )
+            _ = try await keyClient.uploadPreKeys(accessToken: accessToken, body: request)
+            try SignalIdentityKeys.markPreKeysUploaded()
+            logger.info("prekeys uploaded (\(batch.oneTimePreKeys.count, privacy: .public) OPKs)")
+        } catch {
+            // Transient failure — flag stays unset so the next warmup
+            // or next /auth/verify retries. NEVER let this throw up
+            // to the UI: a transient pre-key upload failure is fine,
+            // the session is already persisted and recoverable.
+            logger.error("prekey upload failed — flag not set, will retry: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     func refresh() async throws {

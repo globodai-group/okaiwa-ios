@@ -51,6 +51,30 @@ let package = Package(
         // the 4.2.9 XCFramework zip at runtime — see the release
         // notes on github.com/trustwallet/wallet-core for context.
         .package(url: "https://github.com/trustwallet/wallet-core.git", from: "4.2.9"),
+
+        // GRDB.swift + SQLCipher — on-device encrypted conversation
+        // store (mirror of Android's Room + SQLCipher setup in
+        // `OkaiwaDatabase.kt`). Canonical upstream GRDB ships source
+        // only; wiring SQLCipher into an SPM-only project requires a
+        // separate C target and a custom defines file, which Apple's
+        // SwiftPM still can't express cleanly in 2026.
+        //
+        // DuckDuckGo maintains a well-scoped fork that bundles
+        // SQLCipher Community Edition into an XCFramework and exposes
+        // the same GRDB product. The package is consumed in production
+        // by the DuckDuckGo iOS app (same threat model as ours: per-
+        // install 32-byte passphrase in Keychain, AES-256 pages, HMAC
+        // page integrity). Their releases track upstream GRDB with a
+        // short lag (3.0.0 ≈ GRDB 7.4.1 + SQLCipher 4.7.0 as of
+        // 2026-03 — see https://github.com/duckduckgo/GRDB.swift).
+        //
+        // We depend on the DuckDuckGo fork and import it as `GRDB`
+        // in source files exactly as we would the upstream. The chat
+        // layer's DAO patterns (Features/Chat/Data/Local/*.swift) run
+        // identically either way — switching back to upstream GRDB
+        // once Apple fixes SPM + C target interop is a one-line
+        // Package.swift change.
+        .package(url: "https://github.com/duckduckgo/GRDB.swift.git", from: "3.0.0"),
     ],
     targets: [
         // MARK: - Core
@@ -78,6 +102,12 @@ let package = Package(
                 "OkaiwaShared",
                 .product(name: "LibSignalClient", package: "libsignal"),
                 .product(name: "WalletCore", package: "wallet-core"),
+                // DuckDuckGo fork exposes the `GRDB` product identical
+                // to upstream groue/GRDB.swift — call sites stay on
+                // `import GRDB`. SQLCipher is bundled into the
+                // XCFramework so there is no separate sqlcipher target
+                // to pin here.
+                .product(name: "GRDB", package: "GRDB.swift"),
             ],
             path: "Okaiwa/Features",
             // Same resource-bundle mechanism as OkaiwaCore. Every
