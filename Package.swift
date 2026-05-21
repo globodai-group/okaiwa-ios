@@ -38,9 +38,28 @@ let package = Package(
         // Signal Foundation's official Swift bindings for the Signal
         // Protocol. Provides IdentityKeyPair, SignedPreKeyRecord,
         // session stores and the signalEncrypt/signalDecrypt entry
-        // points used by the chat layer. Pinned to a confirmed stable
-        // tag on github.com/signalapp/libsignal (latest verified at
-        // v0.92.1 on 2026-04-09).
+        // points used by the chat layer.
+        //
+        // ⚠️ KNOWN LIMITATION (pre-existing — flagged 2026-05-21 by the
+        // dependency/security audit, NOT fixed here because the fix is
+        // an architecture change out of audit scope):
+        //
+        // This `.package(url:)` declaration cannot be resolved by
+        // SwiftPM. signalapp/libsignal keeps its Package.swift under
+        // `swift/`, not at the repo root, and the upstream swift/
+        // README states plainly that "Use as a Swift Package ...is not
+        // supported" — the canonical integration path is CocoaPods
+        // (`pod 'LibSignalClient'`). `swift package resolve` fails with
+        // "Package.swift doesn't exist in file system"; only the Xcode
+        // build (xcodebuild) papers over it. Migrating libsignal to
+        // CocoaPods, or to a root-manifest distribution repo, is the
+        // proper fix and should be tracked as its own task.
+        //
+        // Because the dependency cannot be resolved or built locally,
+        // the pin is intentionally LEFT at 0.92.1 (0.94.1 is the latest
+        // tag as of 2026-05-21; no security advisory affects 0.92.x —
+        // 0.93/0.94 release notes are feature-only). Bumping a pin we
+        // cannot resolve, build or test would be unverifiable.
         .package(url: "https://github.com/signalapp/libsignal.git", from: "0.92.1"),
 
         // Trust Wallet's wallet-core. Provides HDWallet (BIP-39
