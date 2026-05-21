@@ -38,19 +38,57 @@ let package = Package(
         // Signal Foundation's official Swift bindings for the Signal
         // Protocol. Provides IdentityKeyPair, SignedPreKeyRecord,
         // session stores and the signalEncrypt/signalDecrypt entry
-        // points used by the chat layer. Pinned to a confirmed stable
-        // tag on github.com/signalapp/libsignal (latest verified at
-        // v0.92.1 on 2026-04-09).
+        // points used by the chat layer.
+        //
+        // ⚠️ KNOWN LIMITATION (pre-existing — flagged 2026-05-21 by the
+        // dependency/security audit, NOT fixed here because the fix is
+        // an architecture change out of audit scope):
+        //
+        // This `.package(url:)` declaration cannot be resolved by
+        // SwiftPM. signalapp/libsignal keeps its Package.swift under
+        // `swift/`, not at the repo root, and the upstream swift/
+        // README states plainly that "Use as a Swift Package ...is not
+        // supported" — the canonical integration path is CocoaPods
+        // (`pod 'LibSignalClient'`). `swift package resolve` fails with
+        // "Package.swift doesn't exist in file system"; only the Xcode
+        // build (xcodebuild) papers over it. Migrating libsignal to
+        // CocoaPods, or to a root-manifest distribution repo, is the
+        // proper fix and should be tracked as its own task.
+        //
+        // Because the dependency cannot be resolved or built locally,
+        // the pin is intentionally LEFT at 0.92.1 (0.94.1 is the latest
+        // tag as of 2026-05-21; no security advisory affects 0.92.x —
+        // 0.93/0.94 release notes are feature-only). Bumping a pin we
+        // cannot resolve, build or test would be unverifiable.
         .package(url: "https://github.com/signalapp/libsignal.git", from: "0.92.1"),
 
-        // Trust Wallet's wallet-core, distributed as an XCFramework
-        // via SPM. Provides HDWallet (BIP-39 mnemonic) and CoinType-
-        // driven address derivation for ETH/BTC/SOL. Pinned against
-        // the binary target URL published by the project. Note that
-        // the upstream Package.swift on tag 4.6.3 still references
-        // the 4.2.9 XCFramework zip at runtime — see the release
-        // notes on github.com/trustwallet/wallet-core for context.
-        .package(url: "https://github.com/trustwallet/wallet-core.git", from: "4.2.9"),
+        // Trust Wallet's wallet-core. Provides HDWallet (BIP-39
+        // mnemonic) and CoinType-driven address derivation for
+        // ETH/BTC/SOL.
+        //
+        // SECURITY — CVE-2025-66692: a buffer over-read in
+        // `PublicKey::verify()` lets a remote peer trigger a DoS by
+        // feeding a malformed signature. Fixed upstream in commit
+        // 5668c67 (PR #4565), first shipped in the 4.4.0 XCFramework.
+        // wallet-core 4.2.9 — the version this project ran until this
+        // audit — predates the fix and is vulnerable.
+        //
+        // We CANNOT fix this by bumping the `.package(url:)` pin:
+        // wallet-core's own Package.swift is buggy and hard-codes the
+        // 4.2.9 XCFramework `.binaryTarget` URL on EVERY tag through
+        // 4.6.9 (verified 2026-05-21 against the repo manifests). A
+        // source pin of `from: "4.6.9"` would still resolve the
+        // vulnerable 4.2.9 binary at runtime.
+        //
+        // The real 4.6.9 XCFramework IS published as a release asset
+        // — it just isn't referenced by the upstream manifest. So we
+        // declare it as a direct `.binaryTarget` below, pointing at
+        // the 4.6.9 release zips with checksums verified locally via
+        // `swift package compute-checksum` against the canonical
+        // `Package.swift` release asset. This pulls the patched
+        // binary (CVE-2025-66692 + the 4.6.x address-parsing
+        // hardening, PRs #4760-#4763) while keeping `import WalletCore`
+        // unchanged at every call site.
 
         // GRDB.swift + SQLCipher — on-device encrypted conversation
         // store (mirror of Android's Room + SQLCipher setup in
@@ -101,7 +139,11 @@ let package = Package(
                 "OkaiwaCore",
                 "OkaiwaShared",
                 .product(name: "LibSignalClient", package: "libsignal"),
-                .product(name: "WalletCore", package: "wallet-core"),
+                // `WalletCore` + `WalletCoreSwiftProtobuf` are local
+                // `.binaryTarget`s (see below) pinned to the patched
+                // 4.6.9 XCFramework — CVE-2025-66692.
+                "WalletCore",
+                "WalletCoreSwiftProtobuf",
                 // DuckDuckGo fork exposes the `GRDB` product identical
                 // to upstream groue/GRDB.swift — call sites stay on
                 // `import GRDB`. SQLCipher is bundled into the
@@ -125,6 +167,25 @@ let package = Package(
             name: "OkaiwaShared",
             dependencies: [],
             path: "Okaiwa/Shared"
+        ),
+
+        // MARK: - Trust Wallet wallet-core (binary)
+        //
+        // Direct `.binaryTarget`s pinned to the wallet-core 4.6.9
+        // release XCFrameworks. See the SECURITY note in the
+        // `dependencies` block above for why we bypass wallet-core's
+        // own (buggy, 4.2.9-pinned) Package.swift. Checksums verified
+        // 2026-05-21 with `swift package compute-checksum` against the
+        // canonical Package.swift asset of the 4.6.9 GitHub release.
+        .binaryTarget(
+            name: "WalletCore",
+            url: "https://github.com/trustwallet/wallet-core/releases/download/4.6.9/WalletCore.xcframework.zip",
+            checksum: "5dcd70cee8b80c8e5b0c2a6aa29b28a22344ee5773d6e0bc625d175b46679fda"
+        ),
+        .binaryTarget(
+            name: "WalletCoreSwiftProtobuf",
+            url: "https://github.com/trustwallet/wallet-core/releases/download/4.6.9/WalletCoreSwiftProtobuf.xcframework.zip",
+            checksum: "88f83ae22ea8a4f34da3e2f3e78fd97efdb3a1d58599e09063491856826cff76"
         ),
 
         // MARK: - Tests
